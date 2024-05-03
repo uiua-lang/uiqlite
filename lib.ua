@@ -1,42 +1,46 @@
 # Experimental!
 
-DllPath ← ⊡1&args
+DllPath ← ⬚"sqlite3.dll"⊡1&args
 Lib ← &ffi ⊂□DllPath
 
-SqliteStatusOK ← 0
+StatusOK ← 0
 
-SqliteErr ← Lib {"const char*" "sqlite3_errmsg" "const int*"} {∘}
+Err ← Lib {"const char*" "sqlite3_errmsg" "const int*"} {∘}
 # https://www.sqlite.org/c3ref/open.html
-SqliteOpen ← (
-  {⊙Uninit}
-  Lib {"int" "sqlite3_open" "const char*" "void**"}
+Open ← (
+  {⊙0}
+  Lib {"int" "sqlite3_open"
+       "const char*" "void**"}
   °{⊙∘}
-  ⍤ "Failed to open database: _" ≍SqliteStatusOK
+  ⍤ $"Failed to open database: _" ⟜(≍StatusOK)
   $Db
 )
-SqliteClose ← (
+Close ← (
   ⟜(Lib {"int" "sqlite3_close" "const void*"} {∘})
-  ⟨⍤.$"Failed to close database: _" SqliteErr|◌⟩≍SqliteStatusOK:
+  ⟨⍤.$"Failed to close database: _" Err|◌⟩≍StatusOK:
 )
-SqlitePrepare ← (
-  ⟜(
-    {⊙⊙(¯1 Uninit NULL)}
-    Lib {"int" "sqlite3_prepare_v2" "const void*" "const char*" "int" "void**" "const char**"}
+Exec ← (
+  {⊙⊙(0 0 "www")}:
+  Lib {"int" "sqlite3_exec"
+       "const void*" "const char*" "const void*" "const void*" "const char**"}
+  °{⊙∘}
+  ⟨⍤.$"Failed to exec: _"|◌⟩≍StatusOK
+)
+Prepare ← (
+  ⊃(
+    {⊙⊙(¯1 0 0)}:
+    Lib {"int" "sqlite3_prepare_v2"
+         "const void*" "const char*" "int" "void**" "const char**"}
     °{⊙∘}↘¯1
-  )
-  ⟨⍤.$"Failed to prepare stmt: _" SqliteErr|◌⟩≍SqliteStatusOK:
+  )⋅∘
+  ⟨⍤.$"Failed to prepare stmt: _" Err:|⊙◌⟩≍StatusOK
   $Stmt
 )
-SqliteStep ← (
-  ⟜(Lib {"int" "sqlite3_step" "const void*"} {∘})
-  ⟨⍤.$"Failed to step stmt: _" SqliteErr|◌⟩≍SqliteStatusOK:
+Step ← (
+  Lib {"int" "sqlite3_step" "const void*"} {∘}
+  ⟨⍤.$"Failed to step stmt: _" Err|◌⟩≍StatusOK
 )
-SqliteFinalize ← (
-  ⟜(Lib {"int" "sqlite3_finalize" "const void*"} {∘})
-  ⟨⍤.$"Failed to finalize stmt: _" SqliteErr|◌⟩≍SqliteStatusOK:
+Finalize ← (
+  Lib {"int" "sqlite3_finalize" "const void*"} {∘}
+  ⟨⍤.$"Failed to finalize stmt: _" Err|◌⟩≍StatusOK
 )
-
-SqliteOpen "test.db"
-⟜SqlitePrepare:"CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);"
-⊙(SqliteFinalize⟜SqliteStep)
-SqliteClose

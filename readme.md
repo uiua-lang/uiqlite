@@ -7,7 +7,7 @@ Sqlite3 bindings for Uiua
 
 ```uiua
 # Experimental!
-Sql ~ "lib"
+Sql ~ "git: github.com/uiua-lang/uiqlite"
 
 Sql~Open "test.db"
 Sql~Exec "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT);" .

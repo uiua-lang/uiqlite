@@ -1,6 +1,6 @@
 # Experimental!
 
-DllPath ← ⬚"sqlite3.dll"⊡1&args
+DllPath ← ⍣(⊡1&args|⊂"sqlite3."DllExt)
 Lib ← &ffi ⊂□DllPath
 
 StatusOK ← 0

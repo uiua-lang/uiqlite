@@ -34,7 +34,10 @@ Open ← (
 
 # https://www.sqlite.org/c3ref/close.html
 Close ← (
-  ⟜(Call "int" "sqlite3_close" {"const void*"} {∘})
+  ⟜(
+    {∘}
+    Call "int" "sqlite3_close" {"const void*"}
+  )
   ⟨⍤.$"Failed to close database: _" Err|◌⟩≍StatusOK:
 )
 
@@ -59,20 +62,20 @@ Prepare ← (
 
 # https://www.sqlite.org/c3ref/step.html
 Step ← (
-  GetStatementStmt
-  Call "int" "sqlite3_step" {"const void*"} {∘}
+  {∘} GetStatementStmt
+  Call "int" "sqlite3_step" {"const void*"}
   ≍SqliteRow
 )
 
 # https://www.sqlite.org/c3ref/column_blob.html
 ColumnText ← (
-  {⊙∘}:⊙GetStatementStmt
+  {⊙∘} :⊙GetStatementStmt
   Call "char*" "sqlite3_column_text" {"const void*" "const int"}
 )
 
 # https://www.sqlite.org/c3ref/finalize.html
 Finalize ← (
-  ⊃(GetStatementStmt|GetStatementDb)
-  Call "int" "sqlite3_finalize" {"const void*"} {∘}
+  {∘} ⊃(GetStatementStmt|GetStatementDb)
+  Call "int" "sqlite3_finalize" {"const void*"}
   ⟨⍤.$"Failed to finalize statement: _" Err|◌⟩≍StatusOK
 )

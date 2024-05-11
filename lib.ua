@@ -73,6 +73,18 @@ Step ← (
   ≍SqliteRow
 )
 
+# https://www.sqlite.org/c3ref/column_count.html
+ColumnCount ← (
+  {∘} GetStatementStmt
+  Call "int" "sqlite3_column_count" {"const void*"}
+)
+
+# https://www.sqlite.org/c3ref/column_name.html
+ColumnName ← (
+  {⊙∘} :⊙GetStatementStmt
+  Call "char*" "sqlite3_column_name" {"const void*" "const int"}
+)
+
 # https://www.sqlite.org/c3ref/column_blob.html
 ColumnType ← (
   {⊙∘} :⊙GetStatementStmt
@@ -117,4 +129,28 @@ Finalize ← (
   {∘} ⊃(GetStatementStmt|GetStatementDb)
   Call "int" "sqlite3_finalize" {"const void*"}
   ⟨⍤.$"Failed to finalize statement: _" Err|◌⟩≍StatusOK
+)
+
+GetColumnNames ← (
+  ⊙¤⇡ColumnCount.
+  ≡(□ColumnName)
+)
+
+QueryValues ← (
+  ⟜(⊙[] ⇡ColumnCount)
+  ⍢(
+    ⟜(
+      :¤⊙.
+      ≡(□ColumnValue)
+      :⊂⊃(⋅⋅∘|¤⊙∘)
+    )
+  )Step
+  ◌◌
+)
+
+QueryMap ← (
+  ⟜(¤GetColumnNames)
+  ⟜(QueryValues)
+  :Finalize
+  ≡(□map)
 )

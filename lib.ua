@@ -123,7 +123,7 @@ BindText ← (
 
 BindValue ← (
   ⊃(⋅InferType|⊙∘)
-  ⟨BindNull⊙⊙◌|BindInt|BindFloat|BindText|BindBlob⟩
+  ⟨BindNull⊙◌|BindInt|BindFloat|BindText|BindBlob⟩
 )
 
 BindValues ← ⍚BindValue +1⇡⧻.⊙¤
@@ -136,6 +136,8 @@ BindParameterIndex ← (
 )
 
 BindNamed ← BindValue ⊃(BindParameterIndex⊙⋅∘|⋅⊙∘)
+
+BindNamedMap ← ⍚BindNamed °map⊙¤
 
 # https://www.sqlite.org/c3ref/step.html
 Step ← (

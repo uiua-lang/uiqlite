@@ -1,10 +1,26 @@
 # Experimental!
 Sqlite ~ "lib"
 
-Sqlite~Open "test.db"
-Sqlite~Exec ⊙. $ CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT);
-Sqlite~Exec ⊙. $ INSERT INTO test (name) VALUES ("Dave");
-Sqlite~Prepare ⊙. $ SELECT name FROM test;
-⍢(⟜(&p Sqlite~ColumnText 0))(Sqlite~Step)
-Sqlite~Finalize
-Sqlite~Close
+Sqlite~Open ":memory:"
+
+$ CREATE TABLE IF NOT EXISTS test (
+$   id INTEGER PRIMARY KEY,
+$   int1 INT,
+$   int2 FLOAT,
+$   int3 INT NULL
+$ );
+Sqlite~Exec ⊙.
+
+⍥(
+  $ INSERT INTO test (int1, int2, int3) VALUES (:int1, :int2, :int3);
+  .Sqlite~Prepare ⊙.
+  {727 42.69 NaN}
+  {":int1" ":int2" ":int3"}
+  map
+  Sqlite~BindNamedMap
+  Sqlite~ExecuteInsert
+) 5
+
+Sqlite~Prepare ⊙. $ SELECT * FROM test;
+Sqlite~QueryValues
+⊙Sqlite~Close

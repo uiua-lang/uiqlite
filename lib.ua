@@ -149,8 +149,8 @@ QueryValues ← (
 )
 
 QueryMap ← (
-  ⟜(¤GetColumnNames)
   ⟜(QueryValues)
-  :Finalize
+  ⟜(¤GetColumnNames)
+  Finalize
   ≡(□map)
 )

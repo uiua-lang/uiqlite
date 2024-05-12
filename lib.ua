@@ -8,6 +8,7 @@ GetLibraryPath ↚ (
     ⟨"win32.dll"|"win64.dll"|0⍤"Unsupported architecture"0⟩
     ⊂"bin/sqlite3_"
   ⟩
+  /($"___" ⊙Sep) {"." ThisFileDir ∘}
 )
 
 Lib ← &ffi ⊂□GetLibraryPath

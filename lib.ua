@@ -89,6 +89,13 @@ Prepare ← (
 )
 
 # https://www.sqlite.org/c3ref/bind_blob.html
+BindBlob ← (
+  # TODO: This doesn't work, no idea why
+  {⊙⊙⊙⊙∘} ⊃(⋅⋅GetStatementStmt|∘|⋅∘|⧻⋅∘|NULL|⋅⋅GetStatementDb)
+  Call "int" "sqlite3_bind_blob" {"const void*" "const int" "const int*" "const int" "const void*"}
+  ⟨⍤.$"Failed to bind blob: _" Err|◌⟩≍SqliteOk
+)
+
 BindInt ← (
   {⊙⊙∘} ⊃(⋅⋅GetStatementStmt|⊙∘|⋅⋅GetStatementDb)
   Call "int" "sqlite3_bind_int" {"const void*" "const int" "const int"}
@@ -110,7 +117,7 @@ BindNull ← (
 BindText ← (
   # TODO: This doesn't work, no idea why
   {⊙⊙⊙⊙∘} ⊃(⋅⋅GetStatementStmt|∘|⋅∘|¯1|NULL|⋅⋅GetStatementDb)
-  Call "int" "sqlite3_bind_text" {"const void*" "int" "const char*" "int" "const void*"}
+  Call "int" "sqlite3_bind_text" {"const void*" "const int" "const char*" "int" "const void*"}
   ⟨⍤.$"Failed to bind text: _" Err|◌⟩≍SqliteOk
 )
 
@@ -144,6 +151,7 @@ ColumnType ← (
 ColumnBlob ← (
   {⊙∘} :⊙GetStatementStmt
   0⍤."Returning a BLOB is currently unsupported"◌
+  # TODO: This doesn't work as expected
   # Call "int*" "sqlite3_column_blob" {"const void*" "const int"}
 )
 

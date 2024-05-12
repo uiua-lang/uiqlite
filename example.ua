@@ -1,21 +1,21 @@
 # Experimental!
 Sqlite ~ "lib"
 
-Sqlite~Open "test.db"
+Sqlite~Open ":memory:"
 
 $ CREATE TABLE IF NOT EXISTS test (
 $   id INTEGER PRIMARY KEY,
-$   blob BLOB
+$   int INT
 $ );
 Sqlite~Exec ⊙.
 
 ⍥(
-  $ INSERT INTO test (blob) VALUES (?);
+  $ INSERT INTO test (int) VALUES (:named);
   Sqlite~Prepare ⊙.
-  ⟜(Sqlite~BindBlob 1 [1 2 3 4 5])
+  Sqlite~BindNamed ":named" ⁅×69⚂ .
   Sqlite~ExecuteInsert
 ) 5
 
-Sqlite~Prepare ⊙. $ SELECT blob FROM test;
+Sqlite~Prepare ⊙. $ SELECT * FROM test;
 Sqlite~QueryValues
 ⊙Sqlite~Close

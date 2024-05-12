@@ -121,6 +121,20 @@ BindText ← (
   ⟨⍤.$"Failed to bind text: _" Err|◌⟩≍SqliteOk
 )
 
+BindValue ← (
+  ⊃(⋅InferType|⊙∘)
+  ⟨BindNull⊙⊙◌|BindInt|BindFloat|BindText|BindBlob⟩
+)
+
+# https://www.sqlite.org/c3ref/bind_parameter_index.html"
+BindParameterIndex ← (
+  {⊙∘} ⊃(⋅GetStatementStmt|∘|$"Invalid named parameter: \"_\""∘)
+  Call "int" "sqlite3_bind_parameter_index" {"const void*" "const char*"}
+  ⍤:⊙:>0.
+)
+
+BindNamed ← BindValue ⊃(BindParameterIndex⊙⋅∘|⋅⊙∘)
+
 # https://www.sqlite.org/c3ref/step.html
 Step ← (
   {∘} GetStatementStmt

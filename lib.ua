@@ -28,6 +28,23 @@ Statement ← {$STMT ⊙($DB) ⊙∘}
 GetStatementStmt ← °□⊡0
 GetStatementDb ← °□⊡1
 
+InferredTypeNull ← $NULL 0
+InferredTypeInt ← $INT 1
+InferredTypeFloat ← $FLOAT 2
+InferredTypeText ← $TEXT 3
+InferredTypeBlob ← $BLOB 4
+
+IsNull ← ≍NaN
+IsInt ← ⟨0|≍⁅.⟩/↧[⊃(=0type|≍[]△)].
+IsFloat ← ⟨0|¬≍⁅.⟩/↧[⊃(=0type|≍[]△)].
+IsText ← /↧[⊃(=2type|=1⧻△)]
+IsBlob ← ⟨0|/↧≤255⟩/↧[⊃(=0type|=1⧻△)].
+
+InferType ← (
+  ⍣(⊢⊚[⊃(IsNull|IsInt|IsFloat|IsText|IsBlob)]|0⍤."Invalid value"◌)
+  ⊡:[InferredTypeNull InferredTypeInt InferredTypeFloat InferredTypeText InferredTypeBlob]
+)
+
 # https://www.sqlite.org/c3ref/errcode.html
 Err ← (
   {∘}

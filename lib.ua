@@ -126,6 +126,8 @@ BindValue ← (
   ⟨BindNull⊙⊙◌|BindInt|BindFloat|BindText|BindBlob⟩
 )
 
+BindValues ← ⍚BindValue +1⇡⧻.⊙¤
+
 # https://www.sqlite.org/c3ref/bind_parameter_index.html"
 BindParameterIndex ← (
   {⊙∘} ⊃(⋅GetStatementStmt|∘|$"Invalid named parameter: \"_\""∘)

@@ -5,14 +5,16 @@ Sqlite~Open ":memory:"
 
 $ CREATE TABLE IF NOT EXISTS test (
 $   id INTEGER PRIMARY KEY,
-$   int INT
+$   int1 INT,
+$   int2 INT,
+$   int3 INT
 $ );
 Sqlite~Exec ⊙.
 
 ⍥(
-  $ INSERT INTO test (int) VALUES (:named);
+  $ INSERT INTO test (int1, int2, int3) VALUES (?, ?, ?);
   Sqlite~Prepare ⊙.
-  Sqlite~BindNamed ":named" ⁅×69⚂ .
+  Sqlite~BindValues {1 2 3} .
   Sqlite~ExecuteInsert
 ) 5
 

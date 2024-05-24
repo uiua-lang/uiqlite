@@ -168,9 +168,9 @@ ColumnType ← (
 # https://www.sqlite.org/c3ref/column_blob.html
 ColumnBlob ← (
   {⊙∘} :⊙GetStatementStmt
-  0⍤."Returning a BLOB is currently unsupported"◌
+  # 0⍤."Returning a BLOB is currently unsupported"◌
   # TODO: This doesn't work as expected
-  # Call "int*" "sqlite3_column_blob" {"const void*" "const int"}
+  Call "int*" "sqlite3_column_blob" {"const void*" "const int"}
 )
 
 # https://www.sqlite.org/c3ref/column_blob.html

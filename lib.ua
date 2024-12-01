@@ -2,43 +2,42 @@
 
 GetLibraryPath ↚ (
   ≍"windows"Os
-  ⟨
-    "bin/sqlite3.so"
+  ⨬("bin/sqlite3.so"
   | ⊗□Arch{"x86" "x86_64"}
-    ⟨"win32.dll"|"win64.dll"|0⍤"Unsupported architecture"0⟩
+    ⨬("win32.dll"|"win64.dll"|0⍤"Unsupported architecture"0)
     ⊂"bin/sqlite3_"
-  ⟩
+  )
   /($"___" ⊙Sep) {"." ThisFileDir ∘}
 )
 
-Lib ← &ffi ⊂□GetLibraryPath
+Lib  ← &ffi ⊂□GetLibraryPath
 Call ← Lib ⊂⊟∩□
 
-SqliteOk ← 0
-SqliteRow ← 100
+SqliteOk   ← 0
+SqliteRow  ← 100
 SqliteDone ← 101
 
 SqliteInteger ← 1
-SqliteFloat ← 2
-SqliteText ← 3
-SqliteBlob ← 4
-SqliteNull ← 5
+SqliteFloat   ← 2
+SqliteText    ← 3
+SqliteBlob    ← 4
+SqliteNull    ← 5
 
-Statement ← {$STMT ⊙($DB) ⊙∘}
+Statement        ← {$STMT ⊙($DB) ⊙∘}
 GetStatementStmt ← °□⊡0
-GetStatementDb ← °□⊡1
+GetStatementDb   ← °□⊡1
 
-InferredTypeNull ← $NULL 0
-InferredTypeInt ← $INT 1
+InferredTypeNull  ← $NULL 0
+InferredTypeInt   ← $INT 1
 InferredTypeFloat ← $FLOAT 2
-InferredTypeText ← $TEXT 3
-InferredTypeBlob ← $BLOB 4
+InferredTypeText  ← $TEXT 3
+InferredTypeBlob  ← $BLOB 4
 
-IsNull ← ≍NaN
-IsInt ← ⟨0|≍⁅.⟩/↧[⊃(=0type|≍[]△)].
-IsFloat ← ⟨0|¬≍⁅.⟩/↧[⊃(=0type|≍[]△)].
-IsText ← /↧[⊃(=2type|=1⧻△)]
-IsBlob ← ⟨0|/↧≤255⟩/↧[⊃(=0type|=1⧻△)].
+IsNull  ← ≍NaN
+IsInt   ← ⨬(0|≍⁅.)/↧[⊃(=0type|≍[]△)].
+IsFloat ← ⨬(0|¬≍⁅.)/↧[⊃(=0type|≍[]△)].
+IsText  ← /↧[⊃(=2type|=1⧻△)]
+IsBlob  ← ⨬(0|/↧≤255)/↧[⊃(=0type|=1⧻△)].
 
 InferType ← (
   ⍣(⊢⊚[⊃(IsNull|IsInt|IsFloat|IsText|IsBlob)]|0⍤."Invalid value"◌)
@@ -62,11 +61,10 @@ Open ← (
 
 # https://www.sqlite.org/c3ref/close.html
 Close ← (
-  ⟜(
-    {∘}
+  ⟜({∘}
     Call "int" "sqlite3_close" {"const void*"}
   )
-  ⟨⍤.$"Failed to close database: _" Err|◌⟩≍SqliteOk:
+  ⨬(⍤.$"Failed to close database: _" Err|◌)≍SqliteOk:
 )
 
 # https://www.sqlite.org/c3ref/exec.html
@@ -74,17 +72,16 @@ Exec ← (
   {⊙⊙(0 0 "www")}:
   Call "int" "sqlite3_exec" {"const void*" "const char*" "const void*" "const void*" "const char**"}
   °{⊙∘}
-  ⟨⍤.$"Failed to exec: _"|◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to exec: _"|◌)≍SqliteOk
 )
 
 # https://www.sqlite.org/c3ref/prepare.html
 Prepare ← (
-  ⊃(
-    {⊙⊙(¯1 0 0)}:
+  ⊃({⊙⊙(¯1 0 0)}:
     Call "int" "sqlite3_prepare_v2" {"const void*" "const char*" "int" "void**" "const char**"}
     °{⊙∘}↘¯1
   )(.⋅∘)
-  ⟨⍤.$"Failed to prepare statement: _" Err:|⊙◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to prepare statement: _" Err:|⊙◌)≍SqliteOk
   Statement
 )
 
@@ -93,37 +90,37 @@ BindBlob ← (
   # TODO: This doesn't work, no idea why
   {⊙⊙⊙⊙∘} ⊃(⋅⋅GetStatementStmt|∘|⋅∘|⧻⋅∘|NULL|⋅⋅GetStatementDb)
   Call "int" "sqlite3_bind_blob" {"const void*" "const int" "const int*" "const int" "const void*"}
-  ⟨⍤.$"Failed to bind blob: _" Err|◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to bind blob: _" Err|◌)≍SqliteOk
 )
 
 BindInt ← (
   {⊙⊙∘} ⊃(⋅⋅GetStatementStmt|⊙∘|⋅⋅GetStatementDb)
   Call "int" "sqlite3_bind_int" {"const void*" "const int" "const int"}
-  ⟨⍤.$"Failed to bind integer: _" Err|◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to bind integer: _" Err|◌)≍SqliteOk
 )
 
 BindFloat ← (
   {⊙⊙∘} ⊃(⋅⋅GetStatementStmt|⊙∘|⋅⋅GetStatementDb)
   Call "int" "sqlite3_bind_double" {"const void*" "const int" "const double"}
-  ⟨⍤.$"Failed to bind float: _" Err|◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to bind float: _" Err|◌)≍SqliteOk
 )
 
 BindNull ← (
   {⊙∘} ⊃(⋅GetStatementStmt|∘|⋅GetStatementDb)
   Call "int" "sqlite3_bind_null" {"const void*" "const int"}
-  ⟨⍤.$"Failed to bind float: _" Err|◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to bind float: _" Err|◌)≍SqliteOk
 )
 
 BindText ← (
   # TODO: This doesn't work, no idea why
   {⊙⊙⊙⊙∘} ⊃(⋅⋅GetStatementStmt|∘|⋅∘|¯1|NULL|⋅⋅GetStatementDb)
   Call "int" "sqlite3_bind_text" {"const void*" "const int" "const char*" "int" "const void*"}
-  ⟨⍤.$"Failed to bind text: _" Err|◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to bind text: _" Err|◌)≍SqliteOk
 )
 
 BindValue ← (
   ⊃(⋅InferType|⊙∘)
-  ⟨BindNull⊙◌|BindInt|BindFloat|BindText|BindBlob⟩
+  ⨬(BindNull⊙◌|BindInt|BindFloat|BindText|BindBlob)
 )
 
 BindValues ← ⍚BindValue +1⇡⧻.⊙¤
@@ -196,19 +193,19 @@ ColumnValue ← (
   ⊃(⊙∘|⊙∘)
   ColumnType
   ⊗: [SqliteInteger SqliteFloat SqliteText SqliteBlob SqliteNull]
-  ⟨ColumnInt|ColumnFloat|ColumnText|ColumnBlob|NaN⟩
+  ⨬(ColumnInt|ColumnFloat|ColumnText|ColumnBlob|NaN)
 )
 
 # https://www.sqlite.org/c3ref/finalize.html
 Finalize ← (
   {∘} ⊃(GetStatementStmt|GetStatementDb)
   Call "int" "sqlite3_finalize" {"const void*"}
-  ⟨⍤.$"Failed to finalize statement: _" Err|◌⟩≍SqliteOk
+  ⨬(⍤.$"Failed to finalize statement: _" Err|◌)≍SqliteOk
 )
 
 ExecuteInsert ← (
   Step ⊃(∘|GetStatementDb|∘)
-  ⟨⍤.$"Failed to execute insert statement: _" Err|◌⟩≍SqliteDone
+  ⨬(⍤.$"Failed to execute insert statement: _" Err|◌)≍SqliteDone
   Finalize
 )
 
@@ -219,9 +216,7 @@ GetColumnNames ← (
 
 QueryValuesInternal ↚ (
   ⟜(⊙[] ⇡ColumnCount)
-  ⍢(
-    ⟜(
-      :¤⊙.
+  ⍢(⟜(:¤⊙.
       ≡(□ColumnValue)
       :⊂⊃(⋅⋅∘|¤⊙∘)
     )

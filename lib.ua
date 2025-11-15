@@ -17,7 +17,7 @@ GetLibraryPath ← memo(
   ⊸(⍤"Sqlite3 library artifact is not available for this platform."&fe)
 )
 
-Lib  ← &ffi ? ⊂□GetLibraryPath
+Lib  ← &ffi ⊂□GetLibraryPath
 Call ← Lib ⊂⊟∩□
 
 ┌─╴Const
@@ -32,56 +32,78 @@ Call ← Lib ⊂⊟∩□
   Null    ← 5
 └─╴
 
-~Query {Statement Database}
+┌─╴FfiType
+  DatabaseHandle ← "int**"
+  String         ← "char*"
+└─╴
+
+~SqliteConnection {DatabaseHandle}
+~SqliteQuery {Statement Database}
 
 ┌─╴InferredType
-  Null  ← $NULL 0
-  Int   ← $INT 1
-  Float ← $FLOAT 2
-  Text  ← $TEXT 3
-  Blob  ← $BLOB 4
+  |Null
+  |Int
+  |Float
+  |Text
+  |Blob
 └─╴
 
 IsNull  ← ≍NaN
-IsInt   ← ⨬(0|≍⁅.)/↧[⊃(=0type|≍[]△)].
-IsFloat ← ⨬(0|¬≍⁅.)/↧[⊃(=0type|≍[]△)].
-IsText  ← /↧[⊃(=2type|=1⧻△)]
-IsBlob  ← ⨬(0|/↧≤255)/↧[⊃(=0type|=1⧻△)].
-
+IsInt   ← ⨬(0|≍⟜⁅) ⊸(/↧⊃[¬≍NaN|=0type|≍[]△])
+IsFloat ← ⨬(0|¬≍⟜⁅) ⊸(/↧⊃[=0type|≍[]△])
+IsText  ← /↧⊃[=1type|=1⧻△]
+IsBlob  ← ⨬(0|/↧≤255) ⊸(/↧⊃[=0type|=1⧻△])
 InferType ← (
-  ⍣(⊢⊚[⊃(IsNull|IsInt|IsFloat|IsText|IsBlob)]|0⍤."Invalid value"◌)
-  ⊡:InferredType![Null Int Float Text Blob]
+  ⍣( ⊢⊚⊃[IsNull|IsInt|IsFloat|IsText|IsBlob]
+  ˜⊡InferredType![Null Int Float Text Blob]
+  | ˙⍤"Invalid value"◌)
 )
 
-# https://www.sqlite.org/c3ref/errcode.html
+# Get the error message from the last failed SQLite operation.
+# String ? SqliteConnection
 Err ← (
-  {∘}
-  Lib {"char*" "sqlite3_errmsg" "{int}*"}
+  # https://www.sqlite.org/c3ref/errcode.html
+  # const char *sqlite3_errmsg(sqlite3*);
+  {SqliteConnection~DatabaseHandle}
+  Call FfiType~String "sqlite3_errmsg" FfiType!{DatabaseHandle}
 )
 
-# https://www.sqlite.org/c3ref/open.html
+# Open a database connection.
+# SqliteConnection ? String
 Open ← (
-  {⊙0}
-  Call "int" "sqlite3_open" {"char*" "out int*"}
-  °{⊙∘}
-  ⍤ $"Failed to open database: _" ⟜(≍Const~Ok)
-  $DB
-)
-
-# https://www.sqlite.org/c3ref/close.html
-Close ← (
-  ⟜({∘}
-    Call "int" "sqlite3_close" {"{int}*"}
+  # https://www.sqlite.org/c3ref/open.html
+  # int sqlite3_open(const char *filename, sqlite3 **ppDb);
+  ⟜(
+    ⊃{∘|¤¤0}
+    Call "int" "sqlite3_open" FfiType!{String $"out _" DatabaseHandle}
+    ≍Const~Ok °{⊙∘}
   )
-  ⨬(⍤.$"Failed to close database: _" Err|◌)≍Const~Ok:
+  ⍤ $"Failed to open database: _"
+  SqliteConnection
 )
 
-# https://www.sqlite.org/c3ref/exec.html
+# Close the database connection.
+# ? SqliteConnection
+Close ← (
+  # https://www.sqlite.org/c3ref/close.html
+  # int sqlite3_close(sqlite3*);
+  ⊸(
+    {SqliteConnection~DatabaseHandle}
+    Call "int" "sqlite3_close" FfiType!{DatabaseHandle}
+  )
+  ⨬(˙⍤$"Failed to close database: _" Err|◌)≍Const~Ok
+)
+
+# Execute a raw SQL statement.
+# ? String SqliteConnection
 Exec ← (
-  {⊙⊙(0 0 "www")}:
-  Call "int" "sqlite3_exec" {"void*" "char*" "void*" "void*" "char*"}
-  °{⊙∘}
-  ⨬(⍤.$"Failed to exec: _"|◌)≍Const~Ok
+  # https://www.sqlite.org/c3ref/exec.html
+  # int sqlite3_exec(sqlite3*, const char *sql, int (*callback)(void*,int,char**,char**), void *, char **errmsg);
+  ⊸(
+    ⊃{SqliteConnection~DatabaseHandle ⋅∘|∘|¤0 ¤0 ""}
+    Call "int" "sqlite3_exec" FfiType!{DatabaseHandle String "int*" "int*" String}
+  )
+  ⨬(˙⍤$"Failed to exec: _" Err|◌)≍Const~Ok
 )
 
 # # https://www.sqlite.org/c3ref/prepare.html

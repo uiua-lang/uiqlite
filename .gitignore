@@ -1,2 +1,3 @@
 *.db
 bin/sqlite
+sandbox.ua

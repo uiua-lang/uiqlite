@@ -257,31 +257,33 @@ BindNamedValue ← BindValue⊸⊙BindParameterIndex
 # ? Map:String→Value SqliteStatement
 BindNamedValueMap ← ⍚BindNamedValue ˜∘ °map ⊙¤
 
-# # https://www.sqlite.org/c3ref/step.html
-# Step ← (
-#   {∘} GetStatementStmt
-#   Call "int" "sqlite3_step" {"const void*"}
-# )
+# Get the number of columns in the result set of a prepared statement.
+# ColumnCount ? SqliteStatement
+ColumnCount ← (
+  # https://www.sqlite.org/c3ref/column_count.html
+  # int sqlite3_column_count(sqlite3_stmt *pStmt);
+  {SqliteStatement~StatementHandle}
+  Call "int" "sqlite3_column_count" FfiType!{StatementHandle}
+)
 
-# StepRow ← ≍SqliteRow Step
+# Get the name of a column given an index in the result set of a prepared statement.
+# String ? ColumnIndex:Int SqliteStatement
+ColumnName ← (
+  # https://www.sqlite.org/c3ref/column_name.html
+  # const char *sqlite3_column_name(sqlite3_stmt*, int N);
+  ⊃{⋅SqliteStatement~StatementHandle|∘}
+  Call FfiType!String "sqlite3_column_name" FfiType!{StatementHandle "int"}
+)
 
-# # https://www.sqlite.org/c3ref/column_count.html
-# ColumnCount ← (
-#   {∘} GetStatementStmt
-#   Call "int" "sqlite3_column_count" {"const void*"}
-# )
-
-# # https://www.sqlite.org/c3ref/column_name.html
-# ColumnName ← (
-#   {⊙∘} :⊙GetStatementStmt
-#   Call "char*" "sqlite3_column_name" {"const void*" "const int"}
-# )
-
-# # https://www.sqlite.org/c3ref/column_blob.html
-# ColumnType ← (
-#   {⊙∘} :⊙GetStatementStmt
-#   Call "int" "sqlite3_column_type" {"const void*" "const int"}
-# )
+# Get the type of a column given an index in the result set of a prepared statement.
+# The result is one of: Const\~Integer, Const\~Float, Const\~Text, Const\~Blob, Const\~Null.
+# Int ? ColumnIndex:Int SqliteStatement
+ColumnType ← (
+  # https://www.sqlite.org/c3ref/column_blob.html
+  # int sqlite3_column_type(sqlite3_stmt*, int iCol);
+  ⊃{⋅SqliteStatement~StatementHandle|∘}
+  Call "int" "sqlite3_column_type" FfiType!{StatementHandle "int"}
+)
 
 # # https://www.sqlite.org/c3ref/column_blob.html
 # ColumnBlob ← (

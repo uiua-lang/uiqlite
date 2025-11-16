@@ -119,3 +119,39 @@ Try!(
   )
 )
 ⍤"Binding map failed"
+
+# Column count test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num1 INTEGER, num2 INTEGER);"
+  "SELECT num1, num2 FROM test;"
+  TestPrepared!(°2 Sql~ColumnCount °0 ⊸Sql~Step)
+)
+⍤"Column count failed"
+
+# Column name test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num1 INTEGER, num2 INTEGER);"
+  "SELECT num1, num2 as custom_name FROM test;"
+  TestPrepared!(
+    °0 ⊸Sql~Step
+    °"num1" ⊸Sql~ColumnName 0
+    °"custom_name" Sql~ColumnName 1
+  )
+)
+⍤"Column name failed"
+
+# Column type test
+Try!(
+  $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (42, 3.14, "ekgame", X'010203', NULL);
+  "SELECT num1, num2, text, blob, nullval FROM test;"
+  TestPrepared!(
+    °1 ⊸Sql~Step
+    °Sql~Const~Integer ⊸Sql~ColumnType 0
+    °Sql~Const~Float ⊸Sql~ColumnType 1
+    °Sql~Const~Text ⊸Sql~ColumnType 2
+    °Sql~Const~Blob ⊸Sql~ColumnType 3
+    °Sql~Const~Null Sql~ColumnType 4
+  )
+)
+⍤"Column type failed"

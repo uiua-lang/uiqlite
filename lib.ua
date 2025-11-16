@@ -285,50 +285,67 @@ ColumnType ← (
   Call "int" "sqlite3_column_type" FfiType!{StatementHandle "int"}
 )
 
-# # https://www.sqlite.org/c3ref/column_blob.html
-# ColumnBlob ← (
-#   {⊙∘} :⊙GetStatementStmt
-#   # 0⍤."Returning a BLOB is currently unsupported"◌
-#   # TODO: This doesn't work as expected
-#   Call "int*" "sqlite3_column_blob" {"const void*" "const int"}
-# )
+# Get the blob value of a column given an index in the result set of a prepared statement.
+# Blob ? ColumnIndex:Int SqliteStatement
+ColumnBlob ← (
+  # https://www.sqlite.org/c3ref/column_blob.html
+  &memcpy ⊃(
+    # const void *sqlite3_column_blob(sqlite3_stmt*, int iCol);
+    ⊃{⋅SqliteStatement~StatementHandle|∘}
+    Call "byte*" "sqlite3_column_blob" FfiType!{StatementHandle "int"}
+  | # int sqlite3_column_bytes(sqlite3_stmt*, int iCol);
+    ⊃{⋅SqliteStatement~StatementHandle|∘}
+    Call "int" "sqlite3_column_bytes" FfiType!{StatementHandle "int"}
+  )
+)
 
-# # https://www.sqlite.org/c3ref/column_blob.html
-# ColumnFloat ← (
-#   {⊙∘} :⊙GetStatementStmt
-#   Call "double" "sqlite3_column_double" {"const void*" "const int"}
-# )
+# Get the floating point value of a column given an index in the result set of a prepared statement.
+# Float ? ColumnIndex:Int SqliteStatement
+ColumnFloat ← (
+  # https://www.sqlite.org/c3ref/column_blob.html
+  # double sqlite3_column_double(sqlite3_stmt*, int iCol);
+  ⊃{⋅SqliteStatement~StatementHandle|∘}
+  Call "double" "sqlite3_column_double" FfiType!{StatementHandle "int"}
+)
 
-# # https://www.sqlite.org/c3ref/column_blob.html
-# ColumnInt ← (
-#   {⊙∘} :⊙GetStatementStmt
-#   Call "int" "sqlite3_column_int" {"const void*" "const int"}
-# )
+# Get the integer value of a column given an index in the result set of a prepared statement.
+# Int ? ColumnIndex:Int SqliteStatement
+ColumnInt ← (
+  # https://www.sqlite.org/c3ref/column_blob.html
+  # int sqlite3_column_int(sqlite3_stmt*, int iCol);
+  ⊃{⋅SqliteStatement~StatementHandle|∘}
+  Call "int" "sqlite3_column_int" FfiType!{StatementHandle "int"}
+)
 
-# # https://www.sqlite.org/c3ref/column_blob.html
-# ColumnText ← (
-#   {⊙∘} :⊙GetStatementStmt
-#   Call "char*" "sqlite3_column_text" {"const void*" "const int"}
-# )
+# Get the text value of a column given an index in the result set of a prepared statement.
+# String ? ColumnIndex:Int SqliteStatement
+ColumnText ← (
+  # https://www.sqlite.org/c3ref/column_blob.html
+  # const unsigned char *sqlite3_column_text(sqlite3_stmt*, int iCol);
+  ⊃{⋅SqliteStatement~StatementHandle|∘}
+  Call FfiType!String "sqlite3_column_text" FfiType!{StatementHandle "int"}
+)
 
-# # Helper function to automatically infer column value and return it
-# ColumnValue ← (
-#   ⊃(⊙∘|⊙∘)
-#   ColumnType
-#   ⊗: [SqliteInteger SqliteFloat SqliteText SqliteBlob SqliteNull]
-#   ⨬(ColumnInt|ColumnFloat|ColumnText|ColumnBlob|NaN)
-# )
+# Get the value of a column given an index in the result set of a prepared statement.
+# This will return the appropriate value based on the column type (NULLs will ne represented by NaN).
+# Value ? ColumnIndex:Int SqliteStatement
+ColumnValue ← (
+  ◡ColumnType
+  ⍣(NaN◌◌ °Const~Null
+  | ColumnInt °Const~Integer
+  | ColumnFloat °Const~Float
+  | ColumnText °Const~Text
+  | ColumnBlob °Const~Blob
+  | ˙⍤$"Unsupported column type: _"◌
+  )
+)
 
-# ExecuteInsert ← (
-#   Step ⊃(∘|GetStatementDb|∘)
-#   ⨬(⍤.$"Failed to execute insert statement: _" Err|◌)≍SqliteDone
-#   Finalize
-# )
-
-# GetColumnNames ← (
-#   ⊙¤⇡ColumnCount.
-#   ≡(□ColumnName)
-# )
+# Get the names of all columns in the result set of a prepared statement.
+# ColumnNames ? SqliteStatement
+ColumnNames ← (
+  ⊃(⇡ColumnCount|¤)
+  ≡(□ColumnName)
+)
 
 # QueryValuesInternal ↚ (
 #   ⟜(⊙[] ⇡ColumnCount)

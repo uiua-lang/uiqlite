@@ -135,7 +135,8 @@ Try!(
   TestPrepared!(
     °0 ⊸Sql~Step
     °"num1" ⊸Sql~ColumnName 0
-    °"custom_name" Sql~ColumnName 1
+    °"custom_name" ⊸Sql~ColumnName 1
+    °{"num1" "custom_name"} Sql~ColumnNames
   )
 )
 ⍤"Column name failed"
@@ -152,6 +153,40 @@ Try!(
     °Sql~Const~Text ⊸Sql~ColumnType 2
     °Sql~Const~Blob ⊸Sql~ColumnType 3
     °Sql~Const~Null Sql~ColumnType 4
+  )
+)
+⍤"Column type failed"
+
+# Column type test
+Try!(
+  $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (42, 3.14, "ekgame", X'010203', NULL);
+  "SELECT num1, num2, text, blob, nullval FROM test;"
+  TestPrepared!(
+    °1 ⊸Sql~Step
+    °42 ⊸Sql~ColumnInt 0
+    °3.14 ⊸Sql~ColumnFloat 1
+    °"ekgame" ⊸Sql~ColumnText 2
+    °[1 2 3] Sql~ColumnBlob 3
+    # NULL values should be handled by checking
+    # if Sql~ColumnType is Sql~Const~Null before
+    # calling any of the Sql~Column* functions.
+  )
+)
+⍤"Column type failed"
+
+# Column type infer test
+Try!(
+  $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (42, 3.14, "ekgame", X'010203', NULL);
+  "SELECT num1, num2, text, blob, nullval FROM test;"
+  TestPrepared!(
+    °1 ⊸Sql~Step
+    °42 ⊸Sql~ColumnValue 0
+    °3.14 ⊸Sql~ColumnValue 1
+    °"ekgame" ⊸Sql~ColumnValue 2
+    °[1 2 3] ⊸Sql~ColumnValue 3
+    °NaN Sql~ColumnValue 4
   )
 )
 ⍤"Column type failed"

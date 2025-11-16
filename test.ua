@@ -87,3 +87,11 @@ Try!(
   TestPrepared!(°0 Sql~Step ⊸Sql~BindBlob [1 2 3 255] 1)
 )
 ⍤"Binding blob failed"
+
+# Bind arbitrary value test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);"
+  "INSERT INTO test (num1, num2, text, blob, nullval) VALUES (?, ?, ?, ?, ?);"
+  TestPrepared!(°0 Sql~Step ⊸Sql~BindValues {67 800.85 "Hello world" [1 2 3 255] NULL})
+)
+⍤"Binding arbitrary values failed"

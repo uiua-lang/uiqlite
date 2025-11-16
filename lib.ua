@@ -47,24 +47,6 @@ Call ↚ Lib ⊂⊟∩□
 ~SqliteConnection {DatabaseHandle}
 ~SqliteStatement {StatementHandle SqliteConnection}
 
-┌─╴InferredType
-  |Null
-  |Int
-  |Float
-  |Text
-  |Blob
-└─╴
-
-IsNull  ← ⍣(⊸°1≍NaN|⊸°1≍NULL|0)
-IsInt   ← ⍣(≍⟜⁅ ⊸(°0≍NaN) ⊸(°0type) ⊸(°1≍[]△)|0)
-IsFloat ← ⍣(¬≍⟜⁅ ⊸(°0type) ⊸(°1≍[]△)|0)
-IsText  ← ⍣(=1type ⊸(°1⧻△)|0)
-IsBlob  ← ⍣(/↧≤255 ⊸(°0type) ⊸(°1⧻△)|0)
-InferType ← ⍣(
-  ⊢⊚⊃[IsNull|IsInt|IsFloat|IsText|IsBlob]
-  ˜⊡InferredType![Null Int Float Text Blob]
-| ˙⍤"Invalid value"◌)
-
 # Get the error message from the last failed SQLite operation.
 # String ? SqliteConnection
 Err ← (
@@ -187,7 +169,7 @@ BindFloat ← (
   # int sqlite3_bind_double(sqlite3_stmt*, int index, double value);
   ⊸(
     ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘}
-    Call "int" "sqlite3_bind_int" FfiType!{StatementHandle "int" "double"}
+    Call "int" "sqlite3_bind_double" FfiType!{StatementHandle "int" "double"}
   )
   ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
   ⨬(˙⍤$"Failed to bind float: _" Err|◌)≍Const~Ok
@@ -220,12 +202,40 @@ BindText ← (
   ⨬(˙⍤$"Failed to bind text: _" Err|◌)≍Const~Ok
 )
 
-# BindValue ← (
-#   ⊃(⋅InferType|⊙∘)
-#   ⨬(BindNull⊙◌|BindInt|BindFloat|BindText|BindBlob)
-# )
+┌─╴InferredType
+  |Null
+  |Int
+  |Float
+  |Text
+  |Blob
+└─╴
 
-# BindValues ← ⍚BindValue +1⇡⧻.⊙¤
+IsNull  ← ⍣(⊸°1≍NaN|⊸°1≍NULL|0)
+IsInt   ← ⍣(≍⟜⁅ ⊸(°0≍NaN) ⊸(°0type) ⊸(°1≍[]△)|0)
+IsFloat ← ⍣(¬≍⟜⁅ ⊸(°0type) ⊸(°1≍[]△)|0)
+IsText  ← ⍣(=1type ⊸(°1⧻△)|0)
+IsBlob  ← ⍣(/↧≤255 ⊸(°0type) ⊸(°1⧻△)|0)
+InferType ← ⍣(
+  ⊢⊚⊃[IsNull|IsInt|IsFloat|IsText|IsBlob]
+  ˜⊡InferredType![Null Int Float Text Blob]
+| ˙⍤"Invalid value"◌)
+
+# Bind an arbitrary value to a prepared statement.
+# ? Value Position SqliteStatement
+BindValue ← (
+  ⊸InferType
+  InferredType!⍣(
+    BindNull◌°Null
+  | BindInt°Int
+  | BindFloat°Float
+  | BindText°Text
+  | BindBlob°Blob
+  | ˙⍤"Unsupported bind value type: _"◌)
+)
+
+# Bind an array of values to a prepared statement.
+# ? Values SqliteStatement
+BindValues ← ⍚BindValue ⟜(+1⇡⧻) ⊙¤
 
 # # https://www.sqlite.org/c3ref/bind_parameter_index.html"
 # BindParameterIndex ← (

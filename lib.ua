@@ -17,8 +17,11 @@ GetLibraryPath ← memo(
   ⊸(⍤"Sqlite3 library artifact is not available for this platform."&fe)
 )
 
-Lib  ← &ffi ⊂□GetLibraryPath
-Call ← Lib ⊂⊟∩□
+# Track Caller!
+Lib ↚ &ffi ⊂□GetLibraryPath
+
+# Track Caller!
+Call ↚ Lib ⊂⊟∩□
 
 ┌─╴Const
   Ok   ← 0
@@ -30,15 +33,19 @@ Call ← Lib ⊂⊟∩□
   Text    ← 3
   Blob    ← 4
   Null    ← 5
+
+  Static    ← 0
+  Transient ← ¯1
 └─╴
 
 ┌─╴FfiType
-  DatabaseHandle ← "int**"
-  String         ← "char*"
+  DatabaseHandle  ← "int**"
+  StatementHandle ← "int**"
+  String          ← "char*"
 └─╴
 
 ~SqliteConnection {DatabaseHandle}
-~SqliteStatement {StatementHandle}
+~SqliteStatement {StatementHandle SqliteConnection}
 
 ┌─╴InferredType
   |Null
@@ -47,6 +54,7 @@ Call ← Lib ⊂⊟∩□
   |Text
   |Blob
 └─╴
+
 IsNull  ← ⍣(⊸°1≍NaN|⊸°1≍NULL|0)
 IsInt   ← ⍣(≍⟜⁅ ⊸(°0≍NaN) ⊸(°0type) ⊸(°1≍[]△)|0)
 IsFloat ← ⍣(¬≍⟜⁅ ⊸(°0type) ⊸(°1≍[]△)|0)
@@ -73,7 +81,7 @@ Open ← (
   # int sqlite3_open(const char *filename, sqlite3 **ppDb);
   ⟜(
     ⊃{∘|¤¤0}
-    Call "int" "sqlite3_open" FfiType!{String $"out _" DatabaseHandle}
+    Call "int" "sqlite3_open" FfiType!{String ($"out _" DatabaseHandle)}
     ≍Const~Ok °{⊙∘}
   )
   ⍤ $"Failed to open database: _"
@@ -104,48 +112,113 @@ Exec ← (
   ⨬(˙⍤$"Failed to exec: _" Err|◌)≍Const~Ok
 )
 
-# # https://www.sqlite.org/c3ref/prepare.html
-# Prepare ← (
-#   ⊃({⊙⊙(¯1 0 0)}:
-#     Call "int" "sqlite3_prepare_v2" {"const void*" "const char*" "int" "void**" "const char**"}
-#     °{⊙∘}↘¯1
-#   )(.⋅∘)
-#   ⨬(⍤.$"Failed to prepare statement: _" Err:|⊙◌)≍SqliteOk
-#   Statement
-# )
+# Prepare a SQL statement for execution.
+# SqliteStatement ? String SqliteConnection
+Prepare ← (
+  # https://www.sqlite.org/c3ref/prepare.html
+  # int sqlite3_prepare_v2(sqlite3 *db, const char *zSql, int nByte, sqlite3_stmt **ppStmt, const char **pzTail);
+  ⊸(⊃{⋅SqliteConnection~DatabaseHandle|∘|¯1 ¤¤0 ""}
+    Call "int" "sqlite3_prepare_v2" FfiType!{DatabaseHandle String "int" ($"out _" StatementHandle) "char*"}
+    °{⊙∘}
+  )
+  ⊃(∘|⋅⋅∘|⋅∘|⋅⋅∘)
+  ⨬(˙⍤$"Failed to exec: _" Err|◌)≍Const~Ok
+  SqliteStatement
+)
 
-# # https://www.sqlite.org/c3ref/bind_blob.html
-# BindBlob ← (
-#   # TODO: This doesn't work, no idea why
-#   {⊙⊙⊙⊙∘} ⊃(⋅⋅GetStatementStmt|∘|⋅∘|⧻⋅∘|NULL|⋅⋅GetStatementDb)
-#   Call "int" "sqlite3_bind_blob" {"const void*" "const int" "const int*" "const int" "const void*"}
-#   ⨬(⍤.$"Failed to bind blob: _" Err|◌)≍SqliteOk
-# )
+# Evaluate a prepared statement.
+# Returns 1 if there are more rows to fetch, 0 otherwise.
+# HasMoreRows ? SqliteStatement
+Step ← (
+  # https://www.sqlite.org/c3ref/step.html
+  # int sqlite3_step(sqlite3_stmt*);
+  ⊸(
+    {SqliteStatement~StatementHandle}
+    Call "int" "sqlite3_step" FfiType!{StatementHandle}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⍣(1◌°Const~Row
+  | 0◌°Const~Done
+  | ˙⍤$"Failed to step the statement: _" Err
+  )
+)
 
-# BindInt ← (
-#   {⊙⊙∘} ⊃(⋅⋅GetStatementStmt|⊙∘|⋅⋅GetStatementDb)
-#   Call "int" "sqlite3_bind_int" {"const void*" "const int" "const int"}
-#   ⨬(⍤.$"Failed to bind integer: _" Err|◌)≍SqliteOk
-# )
+# Delete a prepared statement.
+# ? SqliteStatement
+Finalize ← (
+  # https://www.sqlite.org/c3ref/finalize.html
+  # int sqlite3_finalize(sqlite3_stmt *pStmt);
+  ⊸(
+    {SqliteStatement~StatementHandle}
+    Call "int" "sqlite3_finalize" FfiType!{StatementHandle}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to finalize statement: _" Err|◌)≍Const~Ok
+)
 
-# BindFloat ← (
-#   {⊙⊙∘} ⊃(⋅⋅GetStatementStmt|⊙∘|⋅⋅GetStatementDb)
-#   Call "int" "sqlite3_bind_double" {"const void*" "const int" "const double"}
-#   ⨬(⍤.$"Failed to bind float: _" Err|◌)≍SqliteOk
-# )
+BindBlob ← (
+  # https://www.sqlite.org/c3ref/bind_blob.html
+  # int sqlite3_bind_blob(sqlite3_stmt*, int index, const void *value, int numBytes, void(*)(void*));
+  ⊸(
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻|Const~Transient}
+    Call "int" "sqlite3_bind_blob" FfiType!{StatementHandle "int" "byte*" "int" "int"}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to bind blob: _" Err|◌)≍Const~Ok
+)
 
-# BindNull ← (
-#   {⊙∘} ⊃(⋅GetStatementStmt|∘|⋅GetStatementDb)
-#   Call "int" "sqlite3_bind_null" {"const void*" "const int"}
-#   ⨬(⍤.$"Failed to bind float: _" Err|◌)≍SqliteOk
-# )
+# Bind an integer value to a prepared statement.
+# ? Value Position SqliteStatement
+BindInt ← (
+  # https://www.sqlite.org/c3ref/bind_blob.html
+  # int sqlite3_bind_int(sqlite3_stmt*, int index, int value);
+  ⊸(
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘}
+    Call "int" "sqlite3_bind_int" FfiType!{StatementHandle "int" "int"}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to bind int: _" Err|◌)≍Const~Ok
+)
 
-# BindText ← (
-#   # TODO: This doesn't work, no idea why
-#   {⊙⊙⊙⊙∘} ⊃(⋅⋅GetStatementStmt|∘|⋅∘|¯1|NULL|⋅⋅GetStatementDb)
-#   Call "int" "sqlite3_bind_text" {"const void*" "const int" "const char*" "int" "const void*"}
-#   ⨬(⍤.$"Failed to bind text: _" Err|◌)≍SqliteOk
-# )
+# Bind a floating point value to a prepared statement.
+# ? Value Position SqliteStatement
+BindFloat ← (
+  # https://www.sqlite.org/c3ref/bind_blob.html
+  # int sqlite3_bind_double(sqlite3_stmt*, int index, double value);
+  ⊸(
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘}
+    Call "int" "sqlite3_bind_int" FfiType!{StatementHandle "int" "double"}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to bind float: _" Err|◌)≍Const~Ok
+)
+
+# Bind a NULL value to a prepared statement.
+# ? Position SqliteStatement
+BindNull ← (
+  # https://www.sqlite.org/c3ref/bind_blob.html
+  # int sqlite3_bind_null(sqlite3_stmt*, int index);
+  ⊸(
+    ⊃{⋅SqliteStatement~StatementHandle|∘}
+    Call "int" "sqlite3_bind_null" FfiType!{StatementHandle "int"}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to bind null: _" Err|◌)≍Const~Ok
+)
+
+# Bind a text value to a prepared statement.
+# ? Value Position SqliteStatement
+BindText ← (
+  # https://www.sqlite.org/c3ref/bind_blob.html
+  # https://www.sqlite.org/c3ref/c_static.html
+  # int sqlite3_bind_text(sqlite3_stmt*, int index, const char *value, int numBytes, void(*)(void*));
+  ⊸(
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻utf₈|Const~Transient}
+    Call "int" "sqlite3_bind_text" FfiType!{StatementHandle "int" String "int" "int"}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to bind text: _" Err|◌)≍Const~Ok
+)
 
 # BindValue ← (
 #   ⊃(⋅InferType|⊙∘)
@@ -223,13 +296,6 @@ Exec ← (
 #   ColumnType
 #   ⊗: [SqliteInteger SqliteFloat SqliteText SqliteBlob SqliteNull]
 #   ⨬(ColumnInt|ColumnFloat|ColumnText|ColumnBlob|NaN)
-# )
-
-# # https://www.sqlite.org/c3ref/finalize.html
-# Finalize ← (
-#   {∘} ⊃(GetStatementStmt|GetStatementDb)
-#   Call "int" "sqlite3_finalize" {"const void*"}
-#   ⨬(⍤.$"Failed to finalize statement: _" Err|◌)≍SqliteOk
 # )
 
 # ExecuteInsert ← (

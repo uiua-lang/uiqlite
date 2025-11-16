@@ -18,14 +18,72 @@ Sql ~ "lib"
 ≍[0 1 2 3 4]
 ⍤"The function to infer value type is not working as expected"
 
+# If the given test case raises an error, return 0, otherwise return 1.
+# Success ? TestCase
+Try! ← ⍣(1^0|0)
+
 # Database connection test
-⍣(1 Sql~Close Sql~Open ":memory:"|0)
+Try!(Sql~Close Sql~Open ":memory:")
 ⍤"Opening and closing an in-memory database failed"
 
 # Exec test
-⍣(Sql~Open ":memory:"
-  ⊸Sql~Exec $ CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);
-            $ INSERT INTO test (name) VALUES ("ekgame"), ("kaikalii"), ("JoaoFelipe3");
-  1 Sql~Close
-| 0)
+Try!(
+  Sql~Open ":memory:"
+  $ CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);
+  $ INSERT INTO test (name) VALUES ("ekgame"), ("kaikalii"), ("JoaoFelipe3");
+  Sql~Close ⊸Sql~Exec
+)
 ⍤"Creating and inserting into a table failed"
+
+# Prepared statement test macro.
+# ? PreparedStatementString CreateTableStatement
+TestPrepared! ← (
+  ⊙⊙(Sql~Open ":memory:")
+  ⊙(⊸Sql~Exec) # Expects a string to create a table
+  ⊸(
+    Sql~Prepare # Expects a string for prepared statement
+    ⊸(^0)
+    Sql~Finalize
+  )
+  Sql~Close
+)
+
+# Bind int test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num INTEGER);"
+  "INSERT INTO test (num) VALUES (?);"
+  TestPrepared!(°0 Sql~Step ⊸Sql~BindInt 67 1)
+)
+⍤"Binding int failed"
+
+# Bind float test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num FLOAT);"
+  "INSERT INTO test (num) VALUES (?);"
+  TestPrepared!(°0 Sql~Step ⊸Sql~BindFloat 800.85 1)
+)
+⍤"Binding float failed"
+
+# Bind null test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num INTEGER NULL);"
+  "INSERT INTO test (num) VALUES (?);"
+  TestPrepared!(°0 Sql~Step ⊸Sql~BindNull 1)
+)
+⍤"Binding null failed"
+
+# Bind text test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, val VARCHAR(64));"
+  "INSERT INTO test (val) VALUES (?);"
+  TestPrepared!(°0 Sql~Step ⊸Sql~BindText "Hello world" 1)
+)
+⍤"Binding text failed"
+
+# Bind blob test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, val BLOB);"
+  "INSERT INTO test (val) VALUES (?);"
+  TestPrepared!(°0 Sql~Step ⊸Sql~BindBlob [1 2 3 255] 1)
+)
+⍤"Binding blob failed"

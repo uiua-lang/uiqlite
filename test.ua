@@ -190,3 +190,52 @@ Try!(
   )
 )
 ⍤"Column type failed"
+
+# Retrieve rows test
+Try!(
+  $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (42, 3.14, "ekgame", X'010203', NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (7, 2.71, "kaikalii", X'0A0B0C', 123);
+  "SELECT num1, num2, text, blob, nullval FROM test;"
+  TestPrepared!(
+    °1 ⊸Sql~Step
+    °{42 3.14 "ekgame" [1 2 3] NaN} ⊸Sql~RowValues
+    °1 ⊸Sql~Step
+    °{7 2.71 "kaikalii" [10 11 12] 123} ⊸Sql~RowValues
+    °0 Sql~Step
+  )
+)
+⍤"Row retrieval failed"
+
+# Retrieve query values test
+Try!(
+  $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (42, 3.14, "ekgame", X'010203', NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (7, 2.71, "kaikalii", X'0A0B0C', 123);
+  "SELECT num1, num2, text, blob, nullval FROM test;"
+  TestPrepared!(
+    Sql~QueryValues
+    °[{42 3.14 "ekgame" [1 2 3] NaN}
+      {7 2.71 "kaikalii" [10 11 12] 123}]
+  )
+)
+⍤"Retrieving query values failed"
+
+# Retrieve query values as map test
+Try!(
+  $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (42, 3.14, "ekgame", X'010203', NULL);
+  $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (7, 2.71, "kaikalii", X'0A0B0C', 123);
+  "SELECT num1, num2, text, blob, nullval FROM test;"
+  TestPrepared!(
+    Sql~QueryValuesAsMap
+    °(map {} []
+      insert □"num1" {42 7}
+      insert □"num2" {3.14 2.71}
+      insert □"text" {"ekgame" "kaikalii"}
+      insert □"blob" {[1 2 3] [10 11 12]}
+      insert □"nullval" {NaN 123}
+    )
+  )
+)
+⍤"Retrieving query values as a map failed"

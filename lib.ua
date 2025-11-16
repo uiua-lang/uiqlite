@@ -347,21 +347,17 @@ ColumnValue ← (
   )
 )
 
-# QueryValuesInternal ↚ (
-#   ⟜(⊙[] ⇡ColumnCount)
-#   ⍢(⟜(:¤⊙.
-#       ≡(□ColumnValue)
-#       :⊂⊃(⋅⋅∘|¤⊙∘)
-#     )
-#   )StepRow
-#   ◌◌
-# )
+# Get all values of the current row in the result set of a prepared statement.
+# Values ? SqliteStatement
+RowValues ← (
+  ⊃(⇡ColumnCount|¤)
+  ≡(□ColumnValue)
+)
 
-# QueryValues ← ⊙Finalize QueryValuesInternal.
+# Gather all rows from the result set of a prepared statement.
+# Values ? SqliteStatement
+QueryValues ← ⍢(⟜RowValues|Step)
 
-# QueryMap ← (
-#   ⟜(QueryValuesInternal)
-#   ⟜(¤GetColumnNames)
-#   Finalize
-#   ≡(□map)
-# )
+# Get a map of column names to their corresponding values in the result set of a prepared statement.
+# ValueMap ? SqliteStatement
+QueryValuesAsMap ← map⊃(ColumnNames|⍉QueryValues)

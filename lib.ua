@@ -275,6 +275,13 @@ ColumnName ← (
   Call FfiType!String "sqlite3_column_name" FfiType!{StatementHandle "int"}
 )
 
+# Get the names of all columns in the result set of a prepared statement.
+# ColumnNames ? SqliteStatement
+ColumnNames ← (
+  ⊃(⇡ColumnCount|¤)
+  ≡(□ColumnName)
+)
+
 # Get the type of a column given an index in the result set of a prepared statement.
 # The result is one of: Const\~Integer, Const\~Float, Const\~Text, Const\~Blob, Const\~Null.
 # Int ? ColumnIndex:Int SqliteStatement
@@ -338,13 +345,6 @@ ColumnValue ← (
   | ColumnBlob °Const~Blob
   | ˙⍤$"Unsupported column type: _"◌
   )
-)
-
-# Get the names of all columns in the result set of a prepared statement.
-# ColumnNames ? SqliteStatement
-ColumnNames ← (
-  ⊃(⇡ColumnCount|¤)
-  ≡(□ColumnName)
 )
 
 # QueryValuesInternal ↚ (

@@ -237,16 +237,25 @@ BindValue ← (
 # ? Values SqliteStatement
 BindValues ← ⍚BindValue ⟜(+1⇡⧻) ⊙¤
 
-# # https://www.sqlite.org/c3ref/bind_parameter_index.html"
-# BindParameterIndex ← (
-#   {⊙∘} ⊃(⋅GetStatementStmt|∘|$"Invalid named parameter: \"_\""∘)
-#   Call "int" "sqlite3_bind_parameter_index" {"const void*" "const char*"}
-#   ⍤:⊙:>0.
-# )
+# Get the index of a named parameter in a prepared statement.
+# Index ? ParameterName:String SqliteStatement
+BindParameterIndex ← (
+  # https://www.sqlite.org/c3ref/bind_parameter_index.html
+  # int sqlite3_bind_parameter_index(sqlite3_stmt*, const char *zName);
+  ⤚(
+    ⊃{⋅SqliteStatement~StatementHandle|∘}
+    Call "int" "sqlite3_bind_parameter_index" FfiType!{StatementHandle String}
+  )
+  ⍣(⍩˙⍤ $"Named parameter not found: _" ⊙0 °0|⊙◌)
+)
 
-# BindNamed ← BindValue ⊃(BindParameterIndex⊙⋅∘|⋅⊙∘)
+# Bind a value to a named parameter in a prepared statement.
+# ? Value ParameterName:String SqliteStatement
+BindNamedValue ← BindValue⊸⊙BindParameterIndex
 
-# BindNamedMap ← ⍚BindNamed °map⊙¤
+# Bind a map of named parameters to a prepared statement.
+# ? Map:String→Value SqliteStatement
+BindNamedValueMap ← ⍚BindNamedValue ˜∘ °map ⊙¤
 
 # # https://www.sqlite.org/c3ref/step.html
 # Step ← (

@@ -95,3 +95,27 @@ Try!(
   TestPrepared!(°0 Sql~Step ⊸Sql~BindValues {67 800.85 "Hello world" [1 2 3 255] NULL})
 )
 ⍤"Binding arbitrary values failed"
+
+# Bind named parameter test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num1 INTEGER, num2 INTEGER);"
+  "INSERT INTO test (num1, num2) VALUES (:num1, :num2);"
+  TestPrepared!(
+    ⊸Sql~BindNamedValue 69 ":num1"
+    ⊸Sql~BindNamedValue 420 ":num2"
+    °0 ⊸Try!Sql~BindNamedValue 67 ":nonexistant"
+    °0 Sql~Step
+  )
+)
+⍤"Binding named arguments failed"
+
+# Bind named value map test
+Try!(
+  "CREATE TABLE test (id INTEGER PRIMARY KEY, num1 INTEGER, num2 INTEGER);"
+  "INSERT INTO test (num1, num2) VALUES (:num1, :num2);"
+  TestPrepared!(
+    ⊸Sql~BindNamedValueMap map {":num1" ":num2"} {420 67}
+    °0 Sql~Step
+  )
+)
+⍤"Binding map failed"

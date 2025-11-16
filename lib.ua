@@ -38,7 +38,7 @@ Call ← Lib ⊂⊟∩□
 └─╴
 
 ~SqliteConnection {DatabaseHandle}
-~SqliteQuery {Statement Database}
+~SqliteStatement {StatementHandle}
 
 ┌─╴InferredType
   |Null
@@ -47,17 +47,15 @@ Call ← Lib ⊂⊟∩□
   |Text
   |Blob
 └─╴
-
-IsNull  ← ≍NaN
-IsInt   ← ⨬(0|≍⟜⁅) ⊸(/↧⊃[¬≍NaN|=0type|≍[]△])
-IsFloat ← ⨬(0|¬≍⟜⁅) ⊸(/↧⊃[=0type|≍[]△])
-IsText  ← /↧⊃[=1type|=1⧻△]
-IsBlob  ← ⨬(0|/↧≤255) ⊸(/↧⊃[=0type|=1⧻△])
-InferType ← (
-  ⍣( ⊢⊚⊃[IsNull|IsInt|IsFloat|IsText|IsBlob]
+IsNull  ← ⍣(⊸°1≍NaN|⊸°1≍NULL|0)
+IsInt   ← ⍣(≍⟜⁅ ⊸(°0≍NaN) ⊸(°0type) ⊸(°1≍[]△)|0)
+IsFloat ← ⍣(¬≍⟜⁅ ⊸(°0type) ⊸(°1≍[]△)|0)
+IsText  ← ⍣(=1type ⊸(°1⧻△)|0)
+IsBlob  ← ⍣(/↧≤255 ⊸(°0type) ⊸(°1⧻△)|0)
+InferType ← ⍣(
+  ⊢⊚⊃[IsNull|IsInt|IsFloat|IsText|IsBlob]
   ˜⊡InferredType![Null Int Float Text Blob]
-  | ˙⍤"Invalid value"◌)
-)
+| ˙⍤"Invalid value"◌)
 
 # Get the error message from the last failed SQLite operation.
 # String ? SqliteConnection

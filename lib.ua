@@ -225,12 +225,13 @@ InferType ← ⍣(
 BindValue ← (
   ⊸InferType
   InferredType!⍣(
-    BindNull◌°Null
-  | BindInt°Int
-  | BindFloat°Float
-  | BindText°Text
-  | BindBlob°Blob
-  | ˙⍤"Unsupported bind value type: _"◌)
+    ⍩BindNull◌ °Null
+  | ⍩BindInt °Int
+  | ⍩BindFloat °Float
+  | ⍩BindText °Text
+  | ⍩BindBlob °Blob
+  | ˙⍤"Unsupported bind value type: _"◌
+  )
 )
 
 # Bind an array of values to a prepared statement.
@@ -339,10 +340,10 @@ ColumnText ← (
 ColumnValue ← (
   ◡ColumnType
   ⍣(NaN◌◌ °Const~Null
-  | ColumnInt °Const~Integer
-  | ColumnFloat °Const~Float
-  | ColumnText °Const~Text
-  | ColumnBlob °Const~Blob
+  | ⍩ColumnInt °Const~Integer
+  | ⍩ColumnFloat °Const~Float
+  | ⍩ColumnText °Const~Text
+  | ⍩ColumnBlob °Const~Blob
   | ˙⍤$"Unsupported column type: _"◌
   )
 )

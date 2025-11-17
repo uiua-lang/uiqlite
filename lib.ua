@@ -39,8 +39,8 @@ Call ↚ Lib ⊂⊟∩□
 └─╴
 
 ┌─╴FfiType
-  DatabaseHandle  ← "int**"
-  StatementHandle ← "int**"
+  DatabaseHandle  ← "void**"
+  StatementHandle ← "void**"
   String          ← "char*"
 └─╴
 
@@ -62,7 +62,7 @@ Open ← (
   # https://www.sqlite.org/c3ref/open.html
   # int sqlite3_open(const char *filename, sqlite3 **ppDb);
   ⟜(
-    ⊃{∘|¤¤0}
+    ⊃{∘|0}
     Call "int" "sqlite3_open" FfiType!{String ($"out _" DatabaseHandle)}
     ≍Const~Ok °{⊙∘}
   )
@@ -88,8 +88,8 @@ Exec ← (
   # https://www.sqlite.org/c3ref/exec.html
   # int sqlite3_exec(sqlite3*, const char *sql, int (*callback)(void*,int,char**,char**), void *, char **errmsg);
   ⊸(
-    ⊃{SqliteConnection~DatabaseHandle ⋅∘|∘|¤0 ¤0 ""}
-    Call "int" "sqlite3_exec" FfiType!{DatabaseHandle String "int*" "int*" String}
+    ⊃{SqliteConnection~DatabaseHandle ⋅∘|∘|0 0 ""}
+    Call "int" "sqlite3_exec" FfiType!{DatabaseHandle String "void*" "void*" String}
   )
   ⨬(˙⍤$"Failed to exec: _" Err|◌)≍Const~Ok
 )
@@ -99,7 +99,7 @@ Exec ← (
 Prepare ← (
   # https://www.sqlite.org/c3ref/prepare.html
   # int sqlite3_prepare_v2(sqlite3 *db, const char *zSql, int nByte, sqlite3_stmt **ppStmt, const char **pzTail);
-  ⊸(⊃{⋅SqliteConnection~DatabaseHandle|∘|¯1 ¤¤0 ""}
+  ⊸(⊃{⋅SqliteConnection~DatabaseHandle|∘|¯1 0 ""}
     Call "int" "sqlite3_prepare_v2" FfiType!{DatabaseHandle String "int" ($"out _" StatementHandle) "char*"}
     °{⊙∘}
   )

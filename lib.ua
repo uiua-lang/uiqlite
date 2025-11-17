@@ -143,7 +143,7 @@ BindBlob ← (
   # int sqlite3_bind_blob(sqlite3_stmt*, int index, const void *value, int numBytes, void(*)(void*));
   ⊸(
     ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻|Const~Transient}
-    Call "int" "sqlite3_bind_blob" FfiType!{StatementHandle "int" "byte*" "int" "int"}
+    Call "int" "sqlite3_bind_blob" FfiType!{StatementHandle "int" "byte*" "int" "void*"}
   )
   ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
   ⨬(˙⍤$"Failed to bind blob: _" Err|◌)≍Const~Ok
@@ -196,7 +196,7 @@ BindText ← (
   # int sqlite3_bind_text(sqlite3_stmt*, int index, const char *value, int numBytes, void(*)(void*));
   ⊸(
     ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻utf₈|Const~Transient}
-    Call "int" "sqlite3_bind_text" FfiType!{StatementHandle "int" String "int" "int"}
+    Call "int" "sqlite3_bind_text" FfiType!{StatementHandle "int" String "int" "void*"}
   )
   ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
   ⨬(˙⍤$"Failed to bind text: _" Err|◌)≍Const~Ok

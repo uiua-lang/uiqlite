@@ -125,6 +125,33 @@ Step ← (
   )
 )
 
+# Reset a prepared statement back to its initial state, ready to be re-executed.
+# Note: binding parameters are not cleared, use ClearBindings for that.
+# ? SqliteStatement
+Reset ← (
+  # https://www.sqlite.org/c3ref/reset.html
+  # int sqlite3_reset(sqlite3_stmt *pStmt);
+  ⊸(
+    {SqliteStatement~StatementHandle}
+    Call "int" "sqlite3_reset" FfiType!{StatementHandle}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to reset the statement: _" Err|◌) ≍Const~Ok
+)
+
+# Clear all bindings on a prepared statement.
+# ? SqliteStatement
+ClearBindings ← (
+  # https://www.sqlite.org/c3ref/clear_bindings.html
+  # int sqlite3_clear_bindings(sqlite3_stmt *pStmt);
+  ⊸(
+    {SqliteStatement~StatementHandle}
+    Call "int" "sqlite3_clear_bindings" FfiType!{StatementHandle}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to clear bindings: _" Err|◌)≍Const~Ok
+)
+
 # Delete a prepared statement.
 # ? SqliteStatement
 Finalize ← (
@@ -370,8 +397,33 @@ QueryValuesAsMap ← map⊃(ColumnNames|⍉QueryValues)
 # ? SqliteStatement
 ExecuteWithoutResults ← ⍤"The prepared statement returned results." ¬Step
 
+# Execute a prepared statement and reset it (including bindings).
+# This is useful if you want to execute the same statement multiple times, with different parameters (if it has parameters).
+# This is intended for statements that do not return results (e.g., INSERT, UPDATE, DELETE).
+# ? SqliteStatement
+ExecuteAndReset ← ClearBindings ⊸Reset ⊸ExecuteWithoutResults
+
 # Execute a prepared statement and finalize it.
 # This is intended for statements that do not return results (e.g., INSERT, UPDATE, DELETE).
 # Will raise an error if the statement returns results.
 # ? SqliteStatement
 ExecuteAndFinalize ← Finalize ⊸ExecuteWithoutResults
+
+# Execute a prepared statement multiple times with different parameter values and finalize it.
+# The first argument is an array of parameter value arrays. They will be assigned positionally,
+# even if the prepared statement uses named parameters. The statement will be finalized after execution.
+# ? ArrayOfValueArrays SqliteStatement
+ExecuteBatch ← Finalize ⊸(≡(ExecuteAndReset ⊸BindValues) ⊙¤)
+
+# Given a map of named parameters to values, execute a prepared statement multiple times for each parameter set.
+# The statement will be finalized after execution.
+# ? MapOfNamedValueArrays SqliteStatement
+ExecuteBatchMap ← Finalize ⊸(≡(ExecuteAndReset ⊸BindNamedValueMap map) ⊃(¤|⋅⍉|⋅⋅¤) °map)
+
+# Execute a series of operations within a transaction.
+# If all operations succeed, the transaction is committed. If any operation fails, the transaction is rolled back.
+# ? SqliteConnection
+Transaction! ← (
+  ⊸Exec "BEGIN TRANSACTION;"
+  ⍣(Exec "COMMIT;" ⊸^0|Exec "ROLLBACK;")
+)

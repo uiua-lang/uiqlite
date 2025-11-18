@@ -140,10 +140,11 @@ Finalize ← (
 
 BindBlob ← (
   # https://www.sqlite.org/c3ref/bind_blob.html
-  # int sqlite3_bind_blob(sqlite3_stmt*, int index, const void *value, int numBytes, void(*)(void*));
+  # (custon function defined in bin/compat/uiua_compat.c)
+  # int sqlite3_bind_blob_transient(sqlite3_stmt *stmt, int index, const void *value, int numBytes)
   ⊸(
-    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻|Const~Transient}
-    Call "int" "sqlite3_bind_blob" FfiType!{StatementHandle "int" "byte*" "int" "void*"}
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻}
+    Call "int" "sqlite3_bind_blob_transient" FfiType!{StatementHandle "int" "byte*" "int"}
   )
   ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
   ⨬(˙⍤$"Failed to bind blob: _" Err|◌)≍Const~Ok
@@ -192,11 +193,11 @@ BindNull ← (
 # ? Value Position SqliteStatement
 BindText ← (
   # https://www.sqlite.org/c3ref/bind_blob.html
-  # https://www.sqlite.org/c3ref/c_static.html
-  # int sqlite3_bind_text(sqlite3_stmt*, int index, const char *value, int numBytes, void(*)(void*));
+  # (custon function defined in bin/compat/uiua_compat.c)
+  # int sqlite3_bind_text_transient(sqlite3_stmt *stmt, int index, const char *value, int numBytes);
   ⊸(
-    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻utf₈|Const~Transient}
-    Call "int" "sqlite3_bind_text" FfiType!{StatementHandle "int" String "int" "void*"}
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻utf₈}
+    Call "int" "sqlite3_bind_text_transient" FfiType!{StatementHandle "int" String "int"}
   )
   ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
   ⨬(˙⍤$"Failed to bind text: _" Err|◌)≍Const~Ok

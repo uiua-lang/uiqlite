@@ -29,8 +29,14 @@ check_dependency make || MISSING_DEPS=1
 check_dependency autoconf || MISSING_DEPS=1
 check_dependency gcc || MISSING_DEPS=1
 check_dependency clang || MISSING_DEPS=1
+check_dependency ar || MISSING_DEPS=1
+check_dependency ranlib || MISSING_DEPS=1
 check_dependency x86_64-w64-mingw32-gcc || MISSING_DEPS=1
+check_dependency x86_64-w64-mingw32-ar || MISSING_DEPS=1
+check_dependency x86_64-w64-mingw32-ranlib || MISSING_DEPS=1
 check_dependency i686-w64-mingw32-gcc || MISSING_DEPS=1
+check_dependency i686-w64-mingw32-ar || MISSING_DEPS=1
+check_dependency i686-w64-mingw32-ranlib || MISSING_DEPS=1
 
 if [ $MISSING_DEPS -eq 1 ]; then
     echo ""
@@ -49,6 +55,9 @@ fi
 echo "Removing existing build artifacts..."
 rm -f sqlite3-*
 
+# Create compat directory if it doesn't exist
+mkdir -p compat
+
 echo "Cloning SQLite repository (shallow clone)..."
 git clone --depth 1 https://github.com/sqlite/sqlite.git sqlite
 
@@ -62,12 +71,15 @@ echo "=== Building for Linux x86_64 ==="
 ./configure --enable-shared
 make clean 2>/dev/null || true
 make
-if [ -f "libsqlite3.so" ]; then
-    cp libsqlite3.so ../sqlite3-linux-x86_64.so
+if [ -f "libsqlite3.a" ] && [ -f "libsqlite3.so" ]; then
+    # Compile compat wrapper
+    gcc -fPIC -O2 -I. -I../compat -c ../compat/uiua_compat.c -o ../compat/uiua_compat_linux_x86_64.o
+    # Link static library + compat into new shared library
+    gcc -shared -o ../sqlite3-linux-x86_64.so -Wl,--whole-archive libsqlite3.a -Wl,--no-whole-archive ../compat/uiua_compat_linux_x86_64.o -lm -lz -lpthread -ldl
     strip ../sqlite3-linux-x86_64.so
-    echo "[OK] Linux x86_64 build complete: sqlite3-linux-x86_64.so"
+    echo "[OK] Linux x86_64 build complete: sqlite3-linux-x86_64.so (with compat)"
 else
-    echo -e "${RED}[ERROR] Could not find Linux .so output${NC}"
+    echo -e "${RED}[ERROR] Could not find Linux .a or .so output${NC}"
 fi
 
 echo ""
@@ -76,16 +88,22 @@ CFLAGS="-target x86_64-apple-darwin" ./configure --enable-shared --host=x86_64-a
 ./configure --enable-shared
 make clean 2>/dev/null || true
 make
-if [ -f "libsqlite3.dylib" ]; then
-    cp libsqlite3.dylib ../sqlite3-macos-x86_64.dylib
+if [ -f "libsqlite3.dylib" ] && [ -f "libsqlite3.a" ]; then
+    # Compile compat wrapper
+    clang -fPIC -O2 -target x86_64-apple-darwin -I. -I../compat -c ../compat/uiua_compat.c -o ../compat/uiua_compat_macos_x86_64.o
+    # Link static library + compat into new shared library
+    clang -dynamiclib -o ../sqlite3-macos-x86_64.dylib -target x86_64-apple-darwin -Wl,-force_load,libsqlite3.a ../compat/uiua_compat_macos_x86_64.o -lz
     strip ../sqlite3-macos-x86_64.dylib
-    echo "[OK] macOS x86_64 build complete: sqlite3-macos-x86_64.dylib"
-elif [ -f "libsqlite3.so" ]; then
-    cp libsqlite3.so ../sqlite3-macos-x86_64.dylib
+    echo "[OK] macOS x86_64 build complete: sqlite3-macos-x86_64.dylib (with compat)"
+elif [ -f "libsqlite3.a" ]; then
+    # Compile compat wrapper (cross-compile fallback)
+    gcc -fPIC -O2 -I. -I../compat -c ../compat/uiua_compat.c -o ../compat/uiua_compat_macos_x86_64.o
+    # Link static library + compat into new shared library
+    gcc -shared -o ../sqlite3-macos-x86_64.dylib -Wl,--whole-archive libsqlite3.a -Wl,--no-whole-archive ../compat/uiua_compat_macos_x86_64.o -lm -lz -lpthread -ldl
     strip ../sqlite3-macos-x86_64.dylib
-    echo "[OK] macOS x86_64 build complete: sqlite3-macos-x86_64.dylib (cross-compiled)"
+    echo "[OK] macOS x86_64 build complete: sqlite3-macos-x86_64.dylib (cross-compiled with compat)"
 else
-    echo -e "${RED}[ERROR] Could not find macOS dylib output${NC}"
+    echo -e "${RED}[ERROR] Could not find macOS .a output${NC}"
 fi
 
 echo ""
@@ -93,16 +111,15 @@ echo "=== Building for Windows x86_64 ==="
 ./configure --host=x86_64-w64-mingw32 --enable-shared
 make clean 2>/dev/null || true
 make
-if [ -f "libsqlite3-0.dll" ]; then
-    cp libsqlite3-0.dll ../sqlite3-win-x86_64.dll
+if [ -f "libsqlite3.a" ]; then
+    # Compile compat wrapper
+    x86_64-w64-mingw32-gcc -O2 -I. -I../compat -c ../compat/uiua_compat.c -o ../compat/uiua_compat_win_x86_64.o
+    # Link static library + compat into new shared library
+    x86_64-w64-mingw32-gcc -shared -o ../sqlite3-win-x86_64.dll -Wl,--whole-archive libsqlite3.a -Wl,--no-whole-archive ../compat/uiua_compat_win_x86_64.o -lz
     x86_64-w64-mingw32-strip ../sqlite3-win-x86_64.dll
-    echo "[OK] Win x86_64 build complete: sqlite3-win-x86_64.dll"
-elif [ -f "sqlite3.dll" ]; then
-    cp sqlite3.dll ../sqlite3-win-x86_64.dll
-    x86_64-w64-mingw32-strip ../sqlite3-win-x86_64.dll
-    echo "[OK] Win x86_64 build complete: sqlite3-win-x86_64.dll"
+    echo "[OK] Win x86_64 build complete: sqlite3-win-x86_64.dll (with compat)"
 else
-    echo -e "${RED}[ERROR] Could not find Win x86_64 DLL output${NC}"
+    echo -e "${RED}[ERROR] Could not find Win x86_64 .a output${NC}"
 fi
 
 echo ""
@@ -110,16 +127,15 @@ echo "=== Building for Windows x86 ==="
 ./configure --host=i686-w64-mingw32 --enable-shared
 make clean 2>/dev/null || true
 make
-if [ -f "libsqlite3-0.dll" ]; then
-    cp libsqlite3-0.dll ../sqlite3-win-x86.dll
+if [ -f "libsqlite3.a" ]; then
+    # Compile compat wrapper
+    i686-w64-mingw32-gcc -O2 -I. -I../compat -c ../compat/uiua_compat.c -o ../compat/uiua_compat_win_x86.o
+    # Link static library + compat into new shared library
+    i686-w64-mingw32-gcc -shared -o ../sqlite3-win-x86.dll -Wl,--whole-archive libsqlite3.a -Wl,--no-whole-archive ../compat/uiua_compat_win_x86.o -lz
     i686-w64-mingw32-strip ../sqlite3-win-x86.dll
-    echo "[OK] Win x86 build complete: sqlite3-win-x86.dll"
-elif [ -f "sqlite3.dll" ]; then
-    cp sqlite3.dll ../sqlite3-win-x86.dll
-    i686-w64-mingw32-strip ../sqlite3-win-x86.dll
-    echo "[OK] Win x86 build complete: sqlite3-win-x86.dll"
+    echo "[OK] Win x86 build complete: sqlite3-win-x86.dll (with compat)"
 else
-    echo -e "${RED}[ERROR] Could not find Win x86 DLL output${NC}"
+    echo -e "${RED}[ERROR] Could not find Win x86 .a output${NC}"
 fi
 
 cd ..

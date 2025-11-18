@@ -1,3 +1,4 @@
 *.db
 bin/sqlite
+bin/compat/*.o
 sandbox.ua

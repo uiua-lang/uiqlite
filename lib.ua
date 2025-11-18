@@ -363,3 +363,15 @@ QueryValues ← ⍢(⟜RowValues|Step)
 # Get a map of column names to their corresponding values in the result set of a prepared statement.
 # ValueMap ? SqliteStatement
 QueryValuesAsMap ← map⊃(ColumnNames|⍉QueryValues)
+
+# Execute a prepared statement. The statement will not be finalized.
+# This is intended for statements that do not return results (e.g., INSERT, UPDATE, DELETE).
+# Will raise an error if the statement returns results.
+# ? SqliteStatement
+ExecuteWithoutResults ← ⍤"The prepared statement returned results." ¬Step
+
+# Execute a prepared statement and finalize it.
+# This is intended for statements that do not return results (e.g., INSERT, UPDATE, DELETE).
+# Will raise an error if the statement returns results.
+# ? SqliteStatement
+ExecuteAndFinalize ← Finalize ⊸ExecuteWithoutResults

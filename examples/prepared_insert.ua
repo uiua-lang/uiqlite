@@ -16,23 +16,23 @@ $ );
 ⊸(
   Sql~Prepare $ INSERT INTO test (name, title, lucky_number) VALUES (?, ?, ?);
   ⊸Sql~BindValues {"ekgame" "Generality Assurence" 42}
-  Sql~Finalize ◌⊸Sql~Step # Use "Step" to execute the prepared statement and "Finalize" to clean it up
+  Sql~ExecuteAndFinalize
 )
 
 # Insert data using a prepared statement with named parameters
 ⊸(
   Sql~Prepare $ INSERT INTO test (name, title, lucky_number) VALUES (:name, :title, :lucky_number);
-  ⊸Sql~BindNamedValue "kaikalii" ":name"
-  ⊸Sql~BindNamedValue "Chief Tacitness Engineer" ":title"
-  ⊸Sql~BindNamedValue 8 ":lucky_number"
-  Sql~Finalize ◌⊸Sql~Step
+  ⊸Sql~BindNamedValue ":name" "kaikalii"
+  ⊸Sql~BindNamedValue ":title" "Chief Tacitness Engineer"
+  ⊸Sql~BindNamedValue ":lucky_number" 8
+  Sql~ExecuteAndFinalize
 )
 
 # Insert data using a prepared statement with named parameters map
 ⊸(
   Sql~Prepare $ INSERT INTO test (name, title, lucky_number) VALUES (:name, :title, :lucky_number);
   ⊸Sql~BindNamedValueMap map {":name" ":title" ":lucky_number"} {"JoaoFelipe3" "AoC Connoisseur" 13}
-  Sql~Finalize ◌⊸Sql~Step
+  Sql~ExecuteAndFinalize
 )
 
 # Query the data and pretty print the results

@@ -101,9 +101,9 @@ Try!(
   "CREATE TABLE test (id INTEGER PRIMARY KEY, num1 INTEGER, num2 INTEGER);"
   "INSERT INTO test (num1, num2) VALUES (:num1, :num2);"
   TestPrepared!(
-    ⊸Sql~BindNamedValue 69 ":num1"
-    ⊸Sql~BindNamedValue 420 ":num2"
-    °0 ⊸Try!Sql~BindNamedValue 67 ":nonexistant"
+    ⊸Sql~BindNamedValue ":num1" 69
+    ⊸Sql~BindNamedValue ":num2" 420
+    °0 ⊸Try!Sql~BindNamedValue ":nonexistant" 67
     °0 Sql~Step
   )
 )
@@ -239,3 +239,70 @@ Try!(
   )
 )
 ⍤"Retrieving query values as a map failed"
+
+Try!(
+  Sql~Open ":memory:"
+  ⊸Sql~Exec $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  ⊸(
+    Sql~Prepare $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (?, ?, ?, ?, ?);
+    ⊸Sql~BindValues {1 3.14 "ekgame" [1 2 3] NULL}
+    ⊸Sql~ExecuteAndReset
+    ⊸Sql~BindValues {7 2.71 "kaikalii" [10 11 12] 123}
+    Sql~ExecuteAndFinalize
+  )
+  ⊸(
+    Sql~Prepare $ SELECT num1, num2, text, blob, nullval FROM test;
+    ⊃(Sql~Finalize|Sql~QueryValues)
+    °[{1 3.14 "ekgame" [1 2 3] NaN}
+      {7 2.71 "kaikalii" [10 11 12] 123}]
+  )
+  Sql~Close
+)
+⍤"Reseting statement failed"
+
+Try!(
+  Sql~Open ":memory:"
+  ⊸Sql~Exec $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  ⊸(
+    Sql~Prepare $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (?, ?, ?, ?, ?);
+    ⍩Sql~ExecuteBatch [
+      {1 3.14 "ekgame" [1 2 3] NULL}
+      {7 2.71 "kaikalii" [10 11 12] 123}
+    ]
+  )
+  ⊸(
+    Sql~Prepare $ SELECT num1, num2, text, blob, nullval FROM test;
+    ⊃(Sql~Finalize|Sql~QueryValues)
+    °[{1 3.14 "ekgame" [1 2 3] NaN}
+      {7 2.71 "kaikalii" [10 11 12] 123}]
+  )
+  Sql~Close
+)
+⍤"Executing batch failed"
+
+Try!(
+  Sql~Open ":memory:"
+  ⊸Sql~Exec $ CREATE TABLE test (num1 INTEGER, num2 FLOAT, text VARCHAR(64), blob BLOB, nullval INTEGER NULL);
+  ⊸(
+    Sql~Prepare $ INSERT INTO test (num1, num2, text, blob, nullval) VALUES (:num1, :num2, :text, :blob, :nullval);
+    ⍩Sql~ExecuteBatchMap (
+      [
+        {1 7}
+        {3.14 2.71}
+        {"ekgame" "kaikalii"}
+        {[1 2 3] [10 11 12]}
+        {NULL 123}
+      ]
+      {":num1" ":num2" ":text" ":blob" ":nullval"}
+      map
+    )
+  )
+  ⊸(
+    Sql~Prepare $ SELECT num1, num2, text, blob, nullval FROM test;
+    ⊃(Sql~Finalize|Sql~QueryValues)
+    °[{1 3.14 "ekgame" [1 2 3] NaN}
+      {7 2.71 "kaikalii" [10 11 12] 123}]
+  )
+  Sql~Close
+)
+⍤"Executing batch map failed"

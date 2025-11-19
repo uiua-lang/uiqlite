@@ -39,8 +39,8 @@ Call ↚ Lib ⊂⊟∩□
 └─╴
 
 ┌─╴FfiType
-  DatabaseHandle  ← "int**"
-  StatementHandle ← "int**"
+  DatabaseHandle  ← "void**"
+  StatementHandle ← "void**"
   String          ← "char*"
 └─╴
 
@@ -62,7 +62,7 @@ Open ← (
   # https://www.sqlite.org/c3ref/open.html
   # int sqlite3_open(const char *filename, sqlite3 **ppDb);
   ⟜(
-    ⊃{∘|¤¤0}
+    ⊃{∘|0}
     Call "int" "sqlite3_open" FfiType!{String ($"out _" DatabaseHandle)}
     ≍Const~Ok °{⊙∘}
   )
@@ -88,8 +88,8 @@ Exec ← (
   # https://www.sqlite.org/c3ref/exec.html
   # int sqlite3_exec(sqlite3*, const char *sql, int (*callback)(void*,int,char**,char**), void *, char **errmsg);
   ⊸(
-    ⊃{SqliteConnection~DatabaseHandle ⋅∘|∘|¤0 ¤0 ""}
-    Call "int" "sqlite3_exec" FfiType!{DatabaseHandle String "int*" "int*" String}
+    ⊃{SqliteConnection~DatabaseHandle ⋅∘|∘|0 0 ""}
+    Call "int" "sqlite3_exec" FfiType!{DatabaseHandle String "void*" "void*" String}
   )
   ⨬(˙⍤$"Failed to exec: _" Err|◌)≍Const~Ok
 )
@@ -99,7 +99,7 @@ Exec ← (
 Prepare ← (
   # https://www.sqlite.org/c3ref/prepare.html
   # int sqlite3_prepare_v2(sqlite3 *db, const char *zSql, int nByte, sqlite3_stmt **ppStmt, const char **pzTail);
-  ⊸(⊃{⋅SqliteConnection~DatabaseHandle|∘|¯1 ¤¤0 ""}
+  ⊸(⊃{⋅SqliteConnection~DatabaseHandle|∘|¯1 0 ""}
     Call "int" "sqlite3_prepare_v2" FfiType!{DatabaseHandle String "int" ($"out _" StatementHandle) "char*"}
     °{⊙∘}
   )
@@ -125,6 +125,33 @@ Step ← (
   )
 )
 
+# Reset a prepared statement back to its initial state, ready to be re-executed.
+# Note: binding parameters are not cleared, use ClearBindings for that.
+# ? SqliteStatement
+Reset ← (
+  # https://www.sqlite.org/c3ref/reset.html
+  # int sqlite3_reset(sqlite3_stmt *pStmt);
+  ⊸(
+    {SqliteStatement~StatementHandle}
+    Call "int" "sqlite3_reset" FfiType!{StatementHandle}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to reset the statement: _" Err|◌) ≍Const~Ok
+)
+
+# Clear all bindings on a prepared statement.
+# ? SqliteStatement
+ClearBindings ← (
+  # https://www.sqlite.org/c3ref/clear_bindings.html
+  # int sqlite3_clear_bindings(sqlite3_stmt *pStmt);
+  ⊸(
+    {SqliteStatement~StatementHandle}
+    Call "int" "sqlite3_clear_bindings" FfiType!{StatementHandle}
+  )
+  ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
+  ⨬(˙⍤$"Failed to clear bindings: _" Err|◌)≍Const~Ok
+)
+
 # Delete a prepared statement.
 # ? SqliteStatement
 Finalize ← (
@@ -140,10 +167,11 @@ Finalize ← (
 
 BindBlob ← (
   # https://www.sqlite.org/c3ref/bind_blob.html
-  # int sqlite3_bind_blob(sqlite3_stmt*, int index, const void *value, int numBytes, void(*)(void*));
+  # (custon function defined in bin/compat/uiua_compat.c)
+  # int sqlite3_bind_blob_transient(sqlite3_stmt *stmt, int index, const void *value, int numBytes)
   ⊸(
-    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻|Const~Transient}
-    Call "int" "sqlite3_bind_blob" FfiType!{StatementHandle "int" "byte*" "int" "void*"}
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻}
+    Call "int" "sqlite3_bind_blob_transient" FfiType!{StatementHandle "int" "byte*" "int"}
   )
   ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
   ⨬(˙⍤$"Failed to bind blob: _" Err|◌)≍Const~Ok
@@ -192,11 +220,11 @@ BindNull ← (
 # ? Value Position SqliteStatement
 BindText ← (
   # https://www.sqlite.org/c3ref/bind_blob.html
-  # https://www.sqlite.org/c3ref/c_static.html
-  # int sqlite3_bind_text(sqlite3_stmt*, int index, const char *value, int numBytes, void(*)(void*));
+  # (custon function defined in bin/compat/uiua_compat.c)
+  # int sqlite3_bind_text_transient(sqlite3_stmt *stmt, int index, const char *value, int numBytes);
   ⊸(
-    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻utf₈|Const~Transient}
-    Call "int" "sqlite3_bind_text" FfiType!{StatementHandle "int" String "int" "void*"}
+    ⊃{⋅⋅SqliteStatement~StatementHandle|⋅∘|∘|⧻utf₈}
+    Call "int" "sqlite3_bind_text_transient" FfiType!{StatementHandle "int" String "int"}
   )
   ⊙(SqliteConnection~DatabaseHandle SqliteStatement~SqliteConnection)
   ⨬(˙⍤$"Failed to bind text: _" Err|◌)≍Const~Ok
@@ -225,12 +253,13 @@ InferType ← ⍣(
 BindValue ← (
   ⊸InferType
   InferredType!⍣(
-    BindNull◌°Null
-  | BindInt°Int
-  | BindFloat°Float
-  | BindText°Text
-  | BindBlob°Blob
-  | ˙⍤"Unsupported bind value type: _"◌)
+    ⍩BindNull◌ °Null
+  | ⍩BindInt °Int
+  | ⍩BindFloat °Float
+  | ⍩BindText °Text
+  | ⍩BindBlob °Blob
+  | ˙⍤"Unsupported bind value type: _"◌
+  )
 )
 
 # Bind an array of values to a prepared statement.
@@ -250,12 +279,12 @@ BindParameterIndex ← (
 )
 
 # Bind a value to a named parameter in a prepared statement.
-# ? Value ParameterName:String SqliteStatement
-BindNamedValue ← BindValue⊸⊙BindParameterIndex
+# ? ParameterName:String Value SqliteStatement
+BindNamedValue ← BindValue ⊃(⋅∘|BindParameterIndex ⊙⋅∘|⋅⋅∘)
 
 # Bind a map of named parameters to a prepared statement.
 # ? Map:String→Value SqliteStatement
-BindNamedValueMap ← ⍚BindNamedValue ˜∘ °map ⊙¤
+BindNamedValueMap ← ⍚BindNamedValue °map ⊙¤
 
 # Get the number of columns in the result set of a prepared statement.
 # ColumnCount ? SqliteStatement
@@ -339,10 +368,10 @@ ColumnText ← (
 ColumnValue ← (
   ◡ColumnType
   ⍣(NaN◌◌ °Const~Null
-  | ColumnInt °Const~Integer
-  | ColumnFloat °Const~Float
-  | ColumnText °Const~Text
-  | ColumnBlob °Const~Blob
+  | ⍩ColumnInt °Const~Integer
+  | ⍩ColumnFloat °Const~Float
+  | ⍩ColumnText °Const~Text
+  | ⍩ColumnBlob °Const~Blob
   | ˙⍤$"Unsupported column type: _"◌
   )
 )
@@ -361,3 +390,32 @@ QueryValues ← ⍢(⟜RowValues|Step)
 # Get a map of column names to their corresponding values in the result set of a prepared statement.
 # ValueMap ? SqliteStatement
 QueryValuesAsMap ← map⊃(ColumnNames|⍉QueryValues)
+
+# Execute a prepared statement. The statement will not be finalized.
+# This is intended for statements that do not return results (e.g., INSERT, UPDATE, DELETE).
+# Will raise an error if the statement returns results.
+# ? SqliteStatement
+ExecuteWithoutResults ← ⍤"The prepared statement returned results." ¬Step
+
+# Execute a prepared statement and reset it (including bindings).
+# This is useful if you want to execute the same statement multiple times, with different parameters (if it has parameters).
+# This is intended for statements that do not return results (e.g., INSERT, UPDATE, DELETE).
+# ? SqliteStatement
+ExecuteAndReset ← ClearBindings ⊸Reset ⊸ExecuteWithoutResults
+
+# Execute a prepared statement and finalize it.
+# This is intended for statements that do not return results (e.g., INSERT, UPDATE, DELETE).
+# Will raise an error if the statement returns results.
+# ? SqliteStatement
+ExecuteAndFinalize ← Finalize ⊸ExecuteWithoutResults
+
+# Execute a prepared statement multiple times with different parameter values and finalize it.
+# The first argument is an array of parameter value arrays. They will be assigned positionally,
+# even if the prepared statement uses named parameters. The statement will be finalized after execution.
+# ? ArrayOfValueArrays SqliteStatement
+ExecuteBatch ← Finalize ⊸(≡(ExecuteAndReset ⊸BindValues) ⊙¤)
+
+# Given a map of named parameters to values, execute a prepared statement multiple times for each parameter set.
+# The statement will be finalized after execution.
+# ? MapOfNamedValueArrays SqliteStatement
+ExecuteBatchMap ← Finalize ⊸(≡(ExecuteAndReset ⊸BindNamedValueMap map) ⊃(¤|⋅⍉|⋅⋅¤) °map)

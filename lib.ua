@@ -419,11 +419,3 @@ ExecuteBatch ← Finalize ⊸(≡(ExecuteAndReset ⊸BindValues) ⊙¤)
 # The statement will be finalized after execution.
 # ? MapOfNamedValueArrays SqliteStatement
 ExecuteBatchMap ← Finalize ⊸(≡(ExecuteAndReset ⊸BindNamedValueMap map) ⊃(¤|⋅⍉|⋅⋅¤) °map)
-
-# Execute a series of operations within a transaction.
-# If all operations succeed, the transaction is committed. If any operation fails, the transaction is rolled back.
-# ? SqliteConnection
-Transaction! ← (
-  ⊸Exec "BEGIN TRANSACTION;"
-  ⍣(Exec "COMMIT;" ⊸^0|Exec "ROLLBACK;")
-)

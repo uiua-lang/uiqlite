@@ -22,9 +22,9 @@ $ );
 # Insert data using a prepared statement with named parameters
 ⊸(
   Sql~Prepare $ INSERT INTO test (name, title, lucky_number) VALUES (:name, :title, :lucky_number);
-  ⊸Sql~BindNamedValue "kaikalii" ":name"
-  ⊸Sql~BindNamedValue "Chief Tacitness Engineer" ":title"
-  ⊸Sql~BindNamedValue 8 ":lucky_number"
+  ⊸Sql~BindNamedValue ":name" "kaikalii"
+  ⊸Sql~BindNamedValue ":title" "Chief Tacitness Engineer"
+  ⊸Sql~BindNamedValue ":lucky_number" 8
   Sql~ExecuteAndFinalize
 )
 

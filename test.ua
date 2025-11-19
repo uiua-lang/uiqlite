@@ -101,9 +101,9 @@ Try!(
   "CREATE TABLE test (id INTEGER PRIMARY KEY, num1 INTEGER, num2 INTEGER);"
   "INSERT INTO test (num1, num2) VALUES (:num1, :num2);"
   TestPrepared!(
-    ⊸Sql~BindNamedValue 69 ":num1"
-    ⊸Sql~BindNamedValue 420 ":num2"
-    °0 ⊸Try!Sql~BindNamedValue 67 ":nonexistant"
+    ⊸Sql~BindNamedValue ":num1" 69
+    ⊸Sql~BindNamedValue ":num2" 420
+    °0 ⊸Try!Sql~BindNamedValue ":nonexistant" 67
     °0 Sql~Step
   )
 )

@@ -279,12 +279,12 @@ BindParameterIndex ← (
 )
 
 # Bind a value to a named parameter in a prepared statement.
-# ? Value ParameterName:String SqliteStatement
-BindNamedValue ← BindValue⊸⊙BindParameterIndex
+# ? ParameterName:String Value SqliteStatement
+BindNamedValue ← BindValue ⊃(⋅∘|BindParameterIndex ⊙⋅∘|⋅⋅∘)
 
 # Bind a map of named parameters to a prepared statement.
 # ? Map:String→Value SqliteStatement
-BindNamedValueMap ← ⍚BindNamedValue ˜∘ °map ⊙¤
+BindNamedValueMap ← ⍚BindNamedValue °map ⊙¤
 
 # Get the number of columns in the result set of a prepared statement.
 # ColumnCount ? SqliteStatement

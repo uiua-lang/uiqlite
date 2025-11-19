@@ -34,6 +34,7 @@ See the [`examples/`](examples/) directory for complete working examples:
 - [`raw_query.ua`](examples/raw_query.ua): Basic table creation and querying
 - [`using_datadef.ua`](examples/using_datadef.ua): Working with query results as structured data using Uiua's data definitions
 - [`prepared_insert.ua`](examples/prepared_insert.ua): Using prepared statements with positional and named parameters
+- [`batch_insert.ua`](examples/batch_insert.ua): Reusing prepared statements with different sets of values
 
 ## Development setup
 
